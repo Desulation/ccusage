@@ -10951,9 +10951,9 @@
 	},
 	"deepseek-v4.1-flash-1017": {
 		"cost": {
-			"cache_read": 0.128,
-			"input": 0.511,
-			"output": 1.534
+			"cache_read": 0.111,
+			"input": 0.279,
+			"output": 1.114
 		},
 		"exactOnly": true,
 		"limit": {
@@ -21035,7 +21035,7 @@
 		},
 		"exactOnly": true,
 		"limit": {
-			"context": 128000
+			"context": 118000
 		}
 	},
 	"mistral-small": {
@@ -26776,6 +26776,16 @@
 			"context": 262144
 		}
 	},
+	"prism-ml/ternary-bonsai-2-9b": {
+		"cost": {
+			"cache_read": 0.04,
+			"input": 0.08,
+			"output": 0.13
+		},
+		"limit": {
+			"context": 262144
+		}
+	},
 	"public/deepseek-r1": {
 		"cost": {
 			"input": 0.55,
@@ -29229,9 +29239,9 @@
 	},
 	"reflection/beam-1.0-501b-a23b": {
 		"cost": {
-			"cache_read": 0.05,
-			"input": 0.25,
-			"output": 1
+			"cache_read": 0.035,
+			"input": 0.24,
+			"output": 0.98
 		},
 		"limit": {
 			"context": 1048576
@@ -34741,8 +34751,8 @@
 		"cost": {
 			"cache_read": 0.14,
 			"cache_write": 0,
-			"input": 0.55,
-			"output": 3.6
+			"input": 0.65,
+			"output": 2.88
 		},
 		"limit": {
 			"context": 1048576
@@ -35254,8 +35264,8 @@
 	},
 	"~deepseek/deepseek-pro-latest": {
 		"cost": {
-			"cache_read": 0.22,
-			"input": 0.2247,
+			"cache_read": 0.26,
+			"input": 0.2565,
 			"output": 8
 		},
 		"exactOnly": true,
