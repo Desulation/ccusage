@@ -8,16 +8,6 @@
 			"context": 128000
 		}
 	},
-	"@cf/cloudflare/clairic": {
-		"cost": {
-			"input": 0.1,
-			"output": 0
-		},
-		"exactOnly": true,
-		"limit": {
-			"context": 65536
-		}
-	},
 	"@cf/cloudflare/clef": {
 		"cost": {
 			"input": 0.24,
@@ -35721,9 +35711,9 @@
 	},
 	"~z-ai/glm-flash-latest": {
 		"cost": {
-			"cache_read": 0.03,
-			"input": 0.0304,
-			"output": 0.0852
+			"cache_read": 0.018198,
+			"input": 0.027602,
+			"output": 0.1593
 		},
 		"exactOnly": true,
 		"limit": {
