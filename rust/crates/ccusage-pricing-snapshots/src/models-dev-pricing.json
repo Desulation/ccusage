@@ -11750,9 +11750,9 @@
 	},
 	"deepseek/deepseek-v4.1-flash:thinking": {
 		"cost": {
-			"cache_read": 0.006,
-			"input": 0.09,
-			"output": 0.25
+			"cache_read": 0.000954,
+			"input": 0.0477,
+			"output": 0.1908
 		},
 		"limit": {
 			"context": 1000000
@@ -35876,9 +35876,9 @@
 	},
 	"~moonshotai/kimi-latest": {
 		"cost": {
-			"cache_read": 0.149,
-			"input": 0.159,
-			"output": 20
+			"cache_read": 0.19,
+			"input": 0.19,
+			"output": 10.1583
 		},
 		"exactOnly": true,
 		"limit": {
@@ -35970,16 +35970,16 @@
 	},
 	"~openai/gpt-terra-latest": {
 		"cost": {
-			"cache_read": 0.2,
-			"cache_write": 2.5,
-			"input": 2,
-			"output": 12,
+			"cache_read": 0.05,
+			"cache_write": 1.25,
+			"input": 1,
+			"output": 5,
 			"tiers": [
 				{
-					"cache_read": 0.4,
-					"cache_write": 5,
-					"input": 4,
-					"output": 18,
+					"cache_read": 0.1,
+					"cache_write": 2.5,
+					"input": 2,
+					"output": 7.5,
 					"tier": {
 						"size": 272000,
 						"type": "context"
