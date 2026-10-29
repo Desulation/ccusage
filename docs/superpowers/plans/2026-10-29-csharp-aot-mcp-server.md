@@ -100,11 +100,12 @@ Modified upstream files: §3.2 plus `CONTRIBUTING.md` (§16.7) and the `.agents/
 
 ### Task 0: Phase 0 verification spike (HARD GATE)
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** Answer §11's eight questions with a throwaway bundle; record findings as spec §15; obtain the human's go-ahead.
 
 **Files:**
+
 - Create (throwaway, outside the repo): `C:\Users\gman2\source\AiTesting\ccusage-csharp\phase0\` — nothing under the repo root.
 - Modify: `docs/superpowers/specs/2026-10-29-csharp-aot-mcp-server-design.md` (append `## 15. Phase 0 findings (2026-10-29)`).
 
@@ -184,18 +185,19 @@ Append to the spec:
 ```markdown
 ## 15. Phase 0 findings (2026-10-29)
 
-| # | Question | Answer | Evidence | Consequence |
-|---|---|---|---|---|
-| 1 | platform_overrides honored | yes / no | ... | none / fallback — REQUIRES HUMAN APPROVAL |
-| 2 | ${__dirname} substituted | yes / no | ... | none / fallback — REQUIRES HUMAN APPROVAL |
-| 3 | extracted before first start | yes / no | ... | none / skill + docs mention `/mcp` reconnect — REQUIRES HUMAN APPROVAL |
-| 4 | exec bits preserved | pending CI | ... | launch.sh chmod stays |
-| 5 | OSArchitecture under emulation | yes / no / pending CI | runtime source link | Task 5 step 7 needed: yes/no |
-| 6 | SDK 2.3.0 handlers AOT-clean | yes / no | API: ... | Task 7a/7b API names |
-| 7 | mcpServers placement | entry / manifest | validate output | §7.1 form; Task 9 |
-| 8 | bundle size | NN MB (spike) | file list | real size from CI bundle job |
+| #   | Question                       | Answer                | Evidence            | Consequence                                                            |
+| --- | ------------------------------ | --------------------- | ------------------- | ---------------------------------------------------------------------- |
+| 1   | platform_overrides honored     | yes / no              | ...                 | none / fallback — REQUIRES HUMAN APPROVAL                              |
+| 2   | ${__dirname} substituted       | yes / no              | ...                 | none / fallback — REQUIRES HUMAN APPROVAL                              |
+| 3   | extracted before first start   | yes / no              | ...                 | none / skill + docs mention `/mcp` reconnect — REQUIRES HUMAN APPROVAL |
+| 4   | exec bits preserved            | pending CI            | ...                 | launch.sh chmod stays                                                  |
+| 5   | OSArchitecture under emulation | yes / no / pending CI | runtime source link | Task 5 step 7 needed: yes/no                                           |
+| 6   | SDK 2.3.0 handlers AOT-clean   | yes / no              | API: ...            | Task 7a/7b API names                                                   |
+| 7   | mcpServers placement           | entry / manifest      | validate output     | §7.1 form; Task 9                                                      |
+| 8   | bundle size                    | NN MB (spike)         | file list           | real size from CI bundle job                                           |
 
 ### Environment notes
+
 - AOT publish locally: works / CI-only (reason).
 - Claude Code version used: 2.1.303.
 ```
@@ -237,15 +239,17 @@ Question: the server's first connection attempt happened before extraction finis
 
 ### Task 1: `dotnet/` skeleton (solution, props, server stub, test project, FakeEngine)
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Goal:** A building `dotnet/` tree with two passing tests, `ccusage-mcp --version`, and the AOT/trim analyzers on.
 
 **Files:**
+
 - Create: `dotnet/global.json`, `dotnet/Directory.Build.props`, `dotnet/Directory.Packages.props`, `dotnet/Ccusage.Mcp.slnx`, `dotnet/src/Ccusage.Mcp/Ccusage.Mcp.csproj`, `dotnet/src/Ccusage.Mcp/Program.cs`, `dotnet/src/Ccusage.Mcp/ServerVersion.cs`, `dotnet/tests/Ccusage.Mcp.Tests/Ccusage.Mcp.Tests.csproj`, `dotnet/tests/Ccusage.Mcp.Tests/TestPaths.cs`, `dotnet/tests/Ccusage.Mcp.Tests/VersionTests.cs`, `dotnet/tests/FakeEngine/FakeEngine.csproj`, `dotnet/tests/FakeEngine/Program.cs`, `dotnet/AGENTS.md`
 - Modify: `.gitignore`
 
 **Interfaces (produces):**
+
 - `public static class ServerVersion { public static string Value { get; } }` in `dotnet/src/Ccusage.Mcp/ServerVersion.cs` — `AssemblyInformationalVersionAttribute` of the entry assembly, cut at the first `+`.
 - `internal static class TestPaths { public static string FakeEnginePath { get; } }` in `dotnet/tests/Ccusage.Mcp.Tests/TestPaths.cs` — from `AssemblyMetadataAttribute` key `FakeEnginePath`, `Path.GetFullPath`.
 - FakeEngine protocol: stdout `{"argv":[...],"stdin":"...","noColor":"<NO_COLOR or null>"}`, exit 0. Control args (each also echoed): `--fake-exit=<n>` exit code; `--fake-stderr=<text>` written to stderr; `--fake-stdout=<text>` replaces the echo; `--fake-stdout-bytes=<n>` n bytes of `x` replace the echo; `--fake-hang` sleep forever after writing stdout; `--version` prints `ccusage 0.0.0-fake`. Stdin is read to end only when `Console.IsInputRedirected` and an arg equals `statusline`.
@@ -379,11 +383,12 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 2: `CommandCatalog` from the embedded upstream JSON
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** Derive sources, pages, option applicability and option metadata from `cli-commands.json` + `cli-help.json` with the hand-written type table and drift tests (§4.1, §10.1).
 
 **Files:**
+
 - Modify: `dotnet/src/Ccusage.Mcp/Ccusage.Mcp.csproj`
 - Create: `dotnet/src/Ccusage.Mcp/Commands/OptionKind.cs`, `Commands/OptionTypeTable.cs`, `Commands/CommandCatalog.cs`, `dotnet/src/Ccusage.Mcp/Json/McpJsonContext.cs`
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Commands/CommandCatalogTests.cs`, `Commands/OptionTypeTableDriftTests.cs`
@@ -578,15 +583,17 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 3: `CommandRequest`, `CommandValidator`, argv building
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** Validate a normalized request against the catalog and produce the exact engine argv; failures are `ValidationException`s whose messages the MCP layer returns verbatim.
 
 **Files:**
+
 - Create: `dotnet/src/Ccusage.Mcp/Commands/CommandRequest.cs`, `Commands/ValidationException.cs`, `Commands/CommandValidator.cs`
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Commands/CommandValidatorTests.cs`, `Commands/ArgvBuilderTests.cs`
 
 **Interfaces:**
+
 - Consumes: `CommandCatalog`, `OptionSpec`, `OptionKind` (Task 2).
 - Produces:
 
@@ -603,6 +610,7 @@ public static class CommandValidator
 Argv rules: `[source]` omitted when `all`; `claude blocks` / `claude statusline` emit the root form `blocks` / `statusline` without `claude` (§16.12); then the report; then `--json` for every report except `statusline`; then options **in the page's catalog order**. `Bool` true → `--name`, false → nothing; `NegatableBool` true → `--name`, false → `--no-name`; all other kinds → `--name`, `value` as two elements, value verbatim.
 
 Messages (exact):
+
 - `Unknown source '{s}'. Valid sources: all, claude, codex, opencode, amp, droid, codebuff, hermes, pi, goose, kilo, copilot, gemini, antigravity, kimi, qwen, openclaw, grok, zcode.`
 - `Unknown report '{r}'. Valid reports: daily, weekly, monthly, session, blocks, statusline.`
 - `Report '{r}' is not available for source '{s}'. Sources with '{r}': a, b, c.`
@@ -761,15 +769,17 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 4: `CliArgsParser`
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** Turn CLI-style text (`report` tool `args`, prompt `args`, `/ccusage $ARGUMENTS`) into a `CommandRequest` with the grammar of §5.5.
 
 **Files:**
+
 - Create: `dotnet/src/Ccusage.Mcp/Commands/CliArgsParser.cs`
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Commands/CliArgsParserTests.cs`
 
 **Interfaces:**
+
 - Consumes: `CommandCatalog` (`Sources`, `Reports`, `TryGetPage`, `NeverExposed`), `CommandRequest`, `OptionValue`, `ValidationException`.
 - Produces: `public static class CliArgsParser { public static IReadOnlyList<string> Tokenize(string args); public static CommandRequest Parse(CommandCatalog catalog, string args); }`
 
@@ -868,13 +878,14 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 5: `EngineLocator`
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Phase 0 dependency:** §15 row 5. If it says `RuntimeInformation.OSArchitecture` reports the host architecture under emulation (or the runtime source confirms it), skip step 7; otherwise do step 7.
 
 **Goal:** Resolve the engine path per §6.1, list every checked location on failure, and add the engine line to `--version`.
 
 **Files:**
+
 - Create: `dotnet/src/Ccusage.Mcp/Engine/EngineLocator.cs`, `Engine/EngineNotFoundException.cs`, `dotnet/src/Ccusage.Mcp/VersionCommand.cs`
 - Modify: `dotnet/src/Ccusage.Mcp/Program.cs`
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Engine/EngineLocatorTests.cs`, `dotnet/tests/Ccusage.Mcp.Tests/VersionCommandTests.cs`
@@ -1024,11 +1035,12 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 6: `EngineRunner` with FakeEngine tests
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** Run the engine without a shell, capture stdout/stderr concurrently, deliver stdin for `statusline`, enforce timeout and cancellation by killing the process tree (§6.2, §10.2).
 
 **Files:**
+
 - Create: `dotnet/src/Ccusage.Mcp/Engine/EngineInvocation.cs`, `Engine/EngineResult.cs`, `Engine/EngineRunner.cs`
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Engine/EngineRunnerTests.cs`
 
@@ -1140,13 +1152,14 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 7a: `ToolDefinitions`, `PromptDefinitions`, schema snapshots
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Phase 0 dependency:** §15 row 6 — use the SDK type names recorded there (`Tool`, `ToolAnnotations`, `Prompt`, `PromptArgument`, `ListToolsResult`, `ListPromptsResult`, `McpJsonUtilities.DefaultOptions`).
 
 **Goal:** The eight tool definitions with JSON input schemas derived from the catalog and the `ccusage` prompt definition, pinned by checked-in snapshots.
 
 **Files:**
+
 - Create: `dotnet/src/Ccusage.Mcp/Tools/ToolDefinitions.cs`, `dotnet/src/Ccusage.Mcp/Prompts/PromptDefinitions.cs`, `dotnet/tests/Ccusage.Mcp.Tests/Snapshots/tools-list.json`, `Snapshots/prompts-list.json`
 - Modify: `dotnet/tests/Ccusage.Mcp.Tests/Ccusage.Mcp.Tests.csproj` (`<Content Include="Snapshots/**" CopyToOutputDirectory="PreserveNewest" />`; `AssemblyMetadata` `SnapshotsSourceDir` = `$(MSBuildThisFileDirectory)Snapshots`)
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Tools/ToolDefinitionsTests.cs`, `Tools/SnapshotTests.cs`
@@ -1163,6 +1176,7 @@ public static class PromptDefinitions { public static Prompt Ccusage { get; } }
 ```
 
 Schema rules (every schema `"type":"object"`, `"additionalProperties":false`, `properties` in catalog order):
+
 - `daily|weekly|monthly|session`: `source` first — `{"type":"string","enum":<SourcesWithReport(report), which already starts with "all">,"default":"all","description":"Data source. Default: all."}`; then `UnionOptions(report)` mapped: Bool/NegatableBool → `{"type":"boolean"}`; Enum → `{"type":"string","enum":[...]}`; CsvEnum → `{"type":"string"}` + description suffix ` Comma-separated; each item one of: a, b, c.`; Date → `{"type":"string","pattern":"^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$"}`; Int → `{"type":"integer","minimum":1}` for `last`, `"minimum":0` otherwise; Number → `{"type":"number","minimum":0}`; IntOrMax → `{"type":"string","pattern":"^([1-9]\\d*|max)$"}`; String/Path/PathList → `{"type":"string"}`. Description = help description + ` Default: {Default}.` when non-null + ` Applies to: a, b.` (`SourcesAccepting`) unless every source with the report accepts it.
 - `blocks`: options of `(claude, blocks)`, no `source`. `statusline`: `hook-input` first — `{"type":"object","description":"Claude Code status-line hook payload (session_id, transcript_path, cwd, model, workspace, version, cost, context_window). Written to the engine's stdin unchanged."}`, `required:["hook-input"]`, then `(claude, statusline)` options. `list-sources`: `{"type":"object","properties":{},"additionalProperties":false}`. `report`: `args` `{"type":"string","description":"CLI-style arguments as typed after `ccusage`, e.g. \"codex daily --since 2026-10-01\", \"weekly --last 2 --by-agent\", \"\" (= daily, all sources)."}`, `required:["args"]`.
 - Descriptions: `daily` `Token usage and cost grouped by day. Default source: all detected sources. Long ranges produce large JSON; prefer since/until or last.`; `weekly`/`monthly`/`session` same with `by week` / `by month` / `by session`; `blocks` `Claude Code usage grouped by 5-hour billing blocks (Claude only).`; `statusline` `Claude Code status line text for a hook payload (Claude only; returns plain text).`; `list-sources` `List supported sources, their reports, and the server/engine versions and engine path.`; `report` `Run any ccusage report from CLI-style arguments; same validation as the typed tools.`
@@ -1277,18 +1291,20 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 7b: `ToolHandlers`, `PromptHandlers`, `Program` wiring, AOT publish
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Phase 0 dependency:** §15 row 6 — handler registration API and delegate signatures exactly as recorded; if Task 0 step 4 approved specific IL warning suppressions, only those IDs may be suppressed, each with a justification comment.
 
 **Goal:** `tools/list`, `tools/call`, `prompts/list`, `prompts/get` over stdio; Native AOT publish with zero trim/AOT warnings.
 
 **Files:**
+
 - Create: `dotnet/src/Ccusage.Mcp/Tools/ToolArguments.cs`, `Tools/EngineCall.cs`, `Tools/ToolHandlers.cs`, `dotnet/src/Ccusage.Mcp/Prompts/PromptHandlers.cs`
 - Modify: `dotnet/src/Ccusage.Mcp/Program.cs`, `Json/McpJsonContext.cs` (add `ListSourcesResult`, `SourceInfo`), `dotnet/tests/FakeEngine/Program.cs`, `dotnet/AGENTS.md`
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Tools/ToolHandlersTests.cs`, `Prompts/PromptHandlersTests.cs`
 
 **Interfaces:**
+
 - Consumes: Tasks 2–7a.
 - Produces:
 
@@ -1400,7 +1416,7 @@ public sealed class ToolHandlersTests
 
 - [ ] **Step 2: Write the failing prompt tests** in `Prompts/PromptHandlersTests.cs`
 
-```csharp
+````csharp
 [TestClass]
 public sealed class PromptHandlersTests
 {
@@ -1420,7 +1436,7 @@ public sealed class PromptHandlersTests
     [TestMethod] public async Task GetAsync_UnknownPrompt_Throws() =>
         Assert.AreEqual("Unknown prompt 'x'.", (await Assert.ThrowsExactlyAsync<McpException>(() => Prompts().GetAsync("x", null, default).AsTask())).Message);
 }
-```
+````
 
 - [ ] **Step 3: Run the tests to verify they fail**
 
@@ -1488,15 +1504,17 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 8: Fixtures copy and end-to-end parity tests with the real engine
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** Copy the upstream fixtures to `dotnet/tests/fixtures/` and drive the published server over stdio with the MCP SDK client, asserting pass-through parity with the engine (§10.3).
 
 **Files:**
+
 - Create: `dotnet/tests/fixtures/claude/**`, `dotnet/tests/fixtures/codex/**`, `dotnet/tests/fixtures/statusline/*.json`, `dotnet/tests/fixtures/statusline/test-transcript.jsonl` (copies), `dotnet/tests/Ccusage.Mcp.Tests/E2E/E2eEnvironment.cs`, `E2E/EndToEndTests.cs`
 - Modify: `dotnet/tests/Ccusage.Mcp.Tests/Ccusage.Mcp.Tests.csproj` (`AssemblyMetadata` `FixturesDir` = `$(MSBuildThisFileDirectory)../fixtures`), `dotnet/AGENTS.md`
 
 **Interfaces:**
+
 - Consumes: the published server (env `CCUSAGE_MCP_E2E_SERVER`), the engine (env `CCUSAGE_ENGINE`), the SDK 2.3.0 client API (`McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions { Command, EnvironmentVariables }))`, `CallToolAsync`, `ListToolsAsync`, `GetPromptAsync`, `ServerInfo`; §15 row 6 records only the server-side names), `CommandValidator`, `CliArgsParser`, `EngineRunner`.
 - Produces: `internal static class E2eEnvironment { public static E2eContext RequireOrInconclusive(); }` with `record E2eContext(string ServerPath, string EnginePath, string FixturesDir, Dictionary<string, string?> Env)` — `Assert.Inconclusive("Set CCUSAGE_MCP_E2E_SERVER and CCUSAGE_ENGINE to run e2e tests.")` when either variable is unset. `Env` = `CLAUDE_CONFIG_DIR=<fixtures>/claude`, `CODEX_HOME=<fixtures>/codex`, `HOME` and `USERPROFILE` = a fresh temp dir, `NO_COLOR=1`, `LOG_LEVEL=0`, `CCUSAGE_ENGINE=<EnginePath>` — applied to both the server process (`StdioClientTransportOptions.EnvironmentVariables`) and direct engine runs (`EngineInvocation.Environment`, Task 6); the test process environment is never mutated.
 
@@ -1614,13 +1632,14 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 9: Plugin, skill and marketplace
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Phase 0 dependency:** §15 row 7 (placement of `mcpServers`); Task 0 step 18's answer (Q3 reconnect sentence); Task 0 step 16's answer (one or four plugin entries).
 
 **Goal:** Metadata for `/plugin marketplace add Desulation/ccusage` + `/plugin install ccusage@ccusage`, and the `/ccusage` skill, validated with `claude plugin validate --strict`.
 
 **Files:**
+
 - Create: `.claude-plugin/marketplace.json`, `plugin/.claude-plugin/plugin.json`, `plugin/skills/ccusage/SKILL.md`
 - Modify: `.gitignore`
 
@@ -1648,7 +1667,7 @@ Run: `claude plugin validate --strict plugin`. Expected: success, no warnings.
 Run the marketplace form recorded in §15 row 7 (e.g. `claude plugin validate --strict .`). Expected: success, no warnings.
 
 - [ ] **Step 5a: Ignore the bundle cache** — append `plugin/.mcpb-cache/` to `.gitignore` (`--plugin-dir` extracts the bundle there; §15 environment notes).
-Expected: `grep -c "plugin/.mcpb-cache/" .gitignore` prints `1`.
+      Expected: `grep -c "plugin/.mcpb-cache/" .gitignore` prints `1`.
 
 - [ ] **Step 6: Commit**
 
@@ -1669,16 +1688,18 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 10: Bundle packaging (manifest template, `launch.sh`, assemble/verify/smoke scripts)
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Phase 0 dependency:** §15 rows 1–2 and Task 0 steps 16–17 (manifest form); row 4 (`launch.sh` keeps the `chmod +x` restore either way).
 
 **Goal:** Scripts that turn the six RID artifacts into `ccusage.mcpb`, six archives and `SHA256SUMS`, verify the layout, and smoke-test a bundle through its manifest command on each OS, including the Q4/Q5 CI checks (§16.15).
 
 **Files:**
+
 - Create: `dotnet/packaging/manifest.template.json`, `dotnet/packaging/launch.sh`, `dotnet/packaging/assemble-bundle.sh`, `dotnet/packaging/verify-bundle.sh`, `dotnet/packaging/bundle-smoke.ps1`
 
 **Interfaces (produces):**
+
 - `assemble-bundle.sh --version <v> --artifacts <dir> --out <dir>`: input layout `<dir>/ccusage-mcp-<rid>/ccusage-mcp[.exe]` for `linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64` and `<dir>/ccusage-<rid>/ccusage[.exe]` for all six RIDs (Task 11a artifact names). Output: `<out>/ccusage.mcpb` (layout §7.3; `manifest.json` = template with `__VERSION__` → `<v>`; `chmod +x` on every non-Windows binary first, then `zip -X -r` (Info-ZIP, which stores unix modes by default; `-X` only drops the extra uid/gid fields; never `python -m zipfile`/`Compress-Archive`, which store no modes)), `<out>/ccusage-mcp-<rid>.tar.gz` for linux/osx (`ccusage-mcp`, `ccusage`, `LICENSE`), `<out>/ccusage-mcp-win-x64.zip` and `<out>/ccusage-mcp-win-arm64.zip` (`ccusage-mcp.exe` = the win-x64 server, `ccusage.exe`, `LICENSE`), `<out>/SHA256SUMS` (`sha256sum` format, basenames). Exit 1 naming the first missing input.
 - `verify-bundle.sh <ccusage.mcpb> --version <v>`: unzip to a temp dir; assert the exact §7.3 file list (13 files, nothing else); `jq -e` checks `.manifest_version == "0.3"`, `.name == "ccusage"`, `.version == "<v>"`, `.server.type == "binary"`, `.server.entry_point == "launch.sh"`, `.server.mcp_config.command == "/bin/sh"`, `.server.mcp_config.args == ["${__dirname}/launch.sh"]`, `.server.mcp_config.platform_overrides.win32.command == "${__dirname}/win/ccusage-mcp.exe"`, `.compatibility.platforms == ["darwin","linux","win32"]` (single-quote every `jq` filter that contains `${__dirname}`: under `set -eu` a double-quoted one is an unbound-variable error); every `linux/*/*` and `osx/*/*` entry has `x` in `zipinfo -l` mode; `sh -n launch.sh` parses. Exit 1 naming the first failing check.
 - `bundle-smoke.ps1 -Bundle <ccusage.mcpb> -FixturesDir <dir> -ExpectEnginePath <relative path>`: extract (`unzip` on Linux/macOS so modes survive; `Expand-Archive` on Windows); on Linux/macOS assert `(Get-Item <os>/<arch>/ccusage-mcp).UnixMode` and the engine's contain `x` (Q4 check); read `manifest.json`; pick `mcp_config.platform_overrides.win32` when `$IsWindows`, else the default `command`/`args`; replace `${__dirname}` with the extraction dir; start the process with env `CLAUDE_CONFIG_DIR=<fixtures>/claude`, `HOME`/`USERPROFILE` = temp; send newline-delimited JSON-RPC `initialize`, `notifications/initialized`, `tools/list`, `tools/call list-sources`, `tools/call daily {"source":"claude","offline":true}`, writing each request and reading its reply (the notification has none) before writing the next, and closing stdin only after the last reply was read (a closed stdin shuts the transport down before replies are written; §15 environment notes); assert `serverInfo.name == "ccusage"`, 8 tools, `list-sources` text parses with non-null `engine-version` and `engine-path` ending in `-ExpectEnginePath` (Q5 check: `win\arm64\ccusage.exe` on Windows ARM64), `daily` result not `isError` and block 0 parses as JSON; print `bundle-smoke: ok`, exit 0; otherwise print the failing step, exit 1.
@@ -1741,11 +1762,12 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 11a: Composite actions (engine per RID, server publish, Blacksmith removal)
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Goal:** `.github/actions/build-*-native-package` upload the engine binary as `ccusage-<rid>` without npm staging; a new `publish-mcp-server` action publishes the AOT server as `ccusage-mcp-<rid>` and fails on any IL warning; `setup-nix-cache` no longer uses Blacksmith.
 
 **Files:**
+
 - Modify: `.github/actions/setup-nix-cache/action.yaml`, `.github/actions/build-linux-native-package/action.yaml`, `.github/actions/build-macos-nix-native-package/action.yaml`, `.github/actions/build-windows-native-package/action.yaml`
 - Create: `.github/actions/publish-mcp-server/action.yaml`
 
@@ -1760,10 +1782,10 @@ Add input `rid` (required). Replace the `Stage native package` and `Archive nati
 Expected: no `apps/ccusage` or `packages/` string remains in the file.
 
 - [ ] **Step 3: Rework the macOS engine action** — same edits as step 2 (keep the `x64` cross-build branch; §16.11).
-Expected: no `apps/ccusage` or `packages/` string remains.
+      Expected: no `apps/ccusage` or `packages/` string remains.
 
 - [ ] **Step 4: Rework the Windows engine action** — add `rid`; staging copies to `$RUNNER_TEMP/engine/ccusage.exe`; upload `ccusage-${{ inputs.rid }}` with `path: ${{ runner.temp }}/engine/ccusage.exe`.
-Expected: no `packages/` string remains.
+      Expected: no `packages/` string remains.
 
 - [ ] **Step 5: Look up the `actions/setup-dotnet` SHA**
 
@@ -1798,11 +1820,12 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 11b: `build-artifacts.yaml` (reusable) and `ci.yaml` rewrite
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** CI per §9.2 on GitHub-hosted runners, plus §16.9 (`docs-build` with lockfile regeneration) and §16.15 (Q4/Q5 checks in `bundle-smoke`).
 
 **Files:**
+
 - Create: `.github/workflows/build-artifacts.yaml`
 - Modify: `.github/workflows/ci.yaml`
 
@@ -1868,18 +1891,19 @@ Question: "Push `feat/csharp-mcp-server` to `origin` now so `ci.yaml` runs (Nix 
 
 ### Task 12: `release.yaml`
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** On a tagpr tag: build matrix → bundle → GitHub Release with `ccusage.mcpb`, six archives and `SHA256SUMS` via `gh release create` (§9.3; `nix/tools/changelogithub` stays in the tree unused, §16.4).
 
 **Files:**
+
 - Modify: `.github/workflows/release.yaml`
 
 - [ ] **Step 1: Edit the `tagpr` and `ci` jobs** — `tagpr` `runs-on: ubuntu-latest`; keep `Songmu/tagpr@e1250d6c84e4425db82b5e90549d62dfe23e9ebe`; `ci` unchanged.
-Expected: `grep -c blacksmith .github/workflows/release.yaml` prints `0`.
+      Expected: `grep -c blacksmith .github/workflows/release.yaml` prints `0`.
 
 - [ ] **Step 2: Replace `build-native-packages` with `build-artifacts`** — `needs: tagpr`, `if: needs.tagpr.outputs.tag != ''`, `uses: ./.github/workflows/build-artifacts.yaml`, `with: {ref: ${{ needs.tagpr.outputs.tag }}}`, `permissions: {contents: read, actions: write}`.
-Expected: no `build-*-native-package` `uses:` remains in the file.
+      Expected: no `build-*-native-package` `uses:` remains in the file.
 
 - [ ] **Step 3: Delete the `npm` job.** Expected: `grep -cE "pnpm|npm-registry-gate|publint" .github/workflows/release.yaml` prints `0`.
 
@@ -1907,11 +1931,12 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 13: `sync-upstream.yaml`
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Goal:** Weekly PR bringing `ccusage/ccusage` `main` into this fork (§9.4).
 
 **Files:**
+
 - Create: `.github/workflows/sync-upstream.yaml`
 
 - [ ] **Step 1: Write the workflow**
@@ -1938,13 +1963,14 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 14a: Remove the npm layer; move `config-schema.json`; slim the JS workspace; versioning
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Prerequisites:** Task 8 committed the fixture copies; Tasks 11–12 removed every workflow reference to `apps/ccusage` and `packages/`.
 
 **Goal:** §3.1 deletions and §3.2 edits for the npm packages, workspace, Nix references, justfile, schema location, `.tagpr`; §16.1 and §16.10.
 
 **Files:**
+
 - Delete: `apps/ccusage/` (after the moves), `packages/` (6 dirs), `.oxlintrc.json`, `.oxfmtrc.json`, `nix/tools/publint/`
 - Move: `apps/ccusage/config-schema.json` → `config-schema.json`; `apps/ccusage/LICENSE` → `LICENSE`; `apps/ccusage/README.md` → `README.md` (both replacing symlinks; README rewritten in Task 16)
 - Modify: `package.json`, `pnpm-workspace.yaml`, `package.nix`, `nix/checks.nix`, `nix/treefmt.nix`, `nix/git-hooks.nix`, `nix/packages.nix`, `nix/dev-shell.nix`, `justfile`, `ccusage.example.json`, `docs/package.json`, `docs/README.md`, `.tagpr`, `.gitignore`; `pnpm-lock.yaml` (kept, regenerated by CI)
@@ -1975,16 +2001,16 @@ Content: `{"name":"ccusage","version":"20.0.45","description":"Analyze coding (a
 Expected: `python -m json.tool package.json` succeeds; `jq -r .name package.json` → `ccusage` (use Python if `jq` is absent).
 
 - [ ] **Step 4: Edit `pnpm-workspace.yaml`** — `packages: [docs]`; delete the `types` catalog (`@types/node`, `@types/react`); keep everything else.
-Expected: `grep -cE "apps/[*]|packages/[*]|types:" pnpm-workspace.yaml` prints `0`.
+      Expected: `grep -cE "apps/[*]|packages/[*]|types:" pnpm-workspace.yaml` prints `0`.
 
 - [ ] **Step 5: Edit `docs/package.json`** — scripts `"build": "cp ../config-schema.json public/config-schema.json && vitepress build"`, `"dev": "cp ../config-schema.json public/config-schema.json && vitepress dev"`; remove `@types/node` and `@types/react` devDependencies.
-Expected: `grep -cE "apps/ccusage|catalog:types" docs/package.json` prints `0`.
+      Expected: `grep -cE "apps/ccusage|catalog:types" docs/package.json` prints `0`.
 
 - [ ] **Step 6: Edit `package.nix`** — replace `cliPackageJson = lib.importJSON (root + /apps/ccusage/package.json);` with `rootPackageJson = lib.importJSON (root + /package.json);`; `pname = rootPackageJson.name`; `meta = { inherit (rootPackageJson) description homepage; license = lib.getLicenseFromSpdxId rootPackageJson.license; mainProgram = "ccusage"; }`; fix the two comments above them.
-Expected: `grep -cE "cliPackageJson|apps/ccusage" package.nix` prints `0`.
+      Expected: `grep -cE "cliPackageJson|apps/ccusage" package.nix` prints `0`.
 
 - [ ] **Step 7: Edit `nix/checks.nix`** — `apps/ccusage/config-schema.json` → `config-schema.json` (diff, two messages, `check-jsonschema` line); `just ccusage::generate-schema` → `just schema`; delete the whole `publint = mkRepoCheck ...;` attribute; fix the comment at the old line 104.
-Expected: `grep -cE "apps/ccusage|publint" nix/checks.nix` prints `0`.
+      Expected: `grep -cE "apps/ccusage|publint" nix/checks.nix` prints `0`.
 
 - [ ] **Step 8: Edit `nix/treefmt.nix`, `nix/git-hooks.nix`, `nix/packages.nix`, `nix/dev-shell.nix`**
 
@@ -2053,9 +2079,10 @@ Fix any other CI failure from that run before Task 14b (each fix its own commit)
 
 ### Task 14b: Delete upstream-only workflows and scripts; trim `check-pr-title.yaml` and `CONTRIBUTING.md`
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Files:**
+
 - Delete: `.github/workflows/{pr-gate.yaml,issue-gate.yaml,gate-close-pr.yaml,approve-contributor.yaml,pullfrog.yml,autofix.yaml,update-pricing.yaml,check-links.yaml}`, `.github/scripts/contribution-gate/`, `.github/scripts/contribution-gate.nu`, `.github/scripts/contribution-gate.test.nu`, `.github/APPROVED_CONTRIBUTORS`, `.github/scripts/npm-registry-gate.nu`, `.github/scripts/generate-e2e-fixture.nu`, `.github/scripts/upsert-pr-comment.nu` (§16.6), `.github/actions/commit-and-push-main/` (§16.5)
 - Modify: `.github/workflows/check-pr-title.yaml`, `CONTRIBUTING.md` (§16.7), `.github/actionlint.yaml` (Blacksmith runner labels only; spec §9)
 - Keep: `.github/scripts/{pricing-lock,update-litellm-lock,update-models-dev-lock}.nu` (justfile recipes), `.github/tagpr-template.md`, `renovate.json`, `release.yml`, `FUNDING.yaml`, `ISSUE_TEMPLATE/`
@@ -2069,13 +2096,13 @@ git rm -r -q .github/workflows/pr-gate.yaml .github/workflows/issue-gate.yaml .g
 Expected: `ls .github/workflows` prints `build-artifacts.yaml check-pr-title.yaml ci.yaml release.yaml sync-upstream.yaml`.
 
 - [ ] **Step 2: Trim `check-pr-title.yaml`** — delete the `scope` job and its comment block; keep `main`.
-Expected: `grep -cE "hustcer/setup-nu|scope:" .github/workflows/check-pr-title.yaml` prints `0`.
+      Expected: `grep -cE "hustcer/setup-nu|scope:" .github/workflows/check-pr-title.yaml` prints `0`.
 
 - [ ] **Step 2a: Remove the Blacksmith runner labels from `.github/actionlint.yaml`** — delete the `self-hosted-runner` block (its only `labels` are the four `blacksmith-*` runners); keep `paths`.
-Expected: `grep -ci "blacksmith" .github/actionlint.yaml` prints `0`.
+      Expected: `grep -ci "blacksmith" .github/actionlint.yaml` prints `0`.
 
 - [ ] **Step 3: Trim `CONTRIBUTING.md`** — delete the `## Contribution Gate` section (through the `lgtm` bullets and the sentence after them); in `## Quality Bar For Issues` delete `Maintainers may reopen clear, useful issues and approve the author for future issues or PRs.`; in `## Before Submitting a PR` drop the clause "and wait for approval with `lgtm`" (the sentence becomes "Open an issue first before submitting a PR whenever possible."); leave everything else.
-Expected: `grep -ciE "lgtm|contribution gate" CONTRIBUTING.md` prints `0`.
+      Expected: `grep -ciE "lgtm|contribution gate" CONTRIBUTING.md` prints `0`.
 
 - [ ] **Step 4: Verify** [local]
 
@@ -2100,11 +2127,12 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 15: `AGENTS.md` and `.agents/skills` updates
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Goal:** Agent guidance describes the C# layer; no skill names a deleted path.
 
 **Files:**
+
 - Create: `.agents/skills/dotnet/SKILL.md`
 - Delete: `.agents/skills/typescript/`, `.agents/skills/testing/references/node-test.md`
 - Modify: `AGENTS.md`, `.agents/skills/development/SKILL.md`, `.agents/skills/development/references/commands.md`, `.agents/skills/testing/SKILL.md`, `.agents/skills/docs/SKILL.md`, `.agents/skills/fix-ci/SKILL.md`, `.agents/skills/nushell/SKILL.md`, `.agents/skills/profile/SKILL.md`, `.agents/skills/profile/references/rust.md`, `.agents/skills/rust-binary-size/SKILL.md`, `.agents/skills/tdd/SKILL.md`, `.agents/skills/rust/SKILL.md`
@@ -2128,10 +2156,10 @@ git rm -r -q .agents/skills/typescript .agents/skills/testing/references/node-te
 Expected: `ls .agents/skills | grep -c typescript` prints `0`.
 
 - [ ] **Step 4: Edit `development/SKILL.md` and `references/commands.md`** — "The npm Packaging Seam" → "The MCP Packaging Seam" (`dotnet/`, `dotnet/packaging/*`, `plugin/`, `.claude-plugin/`, version files per `.tagpr`); description frontmatter drops "the npm launcher or native packaging"; `commands.md`: JS/TS tooling sentence → "docs-site tooling in `docs/package.json`"; Releases → "tagpr tags; `release.yaml` builds the matrix, bundles `ccusage.mcpb`, and creates the GitHub Release; `sync-upstream.yaml` opens the weekly upstream PR".
-Expected: `grep -cwE "apps/ccusage|npm" .agents/skills/development/SKILL.md .agents/skills/development/references/commands.md` prints `0` for both (`-w` so the kept `pnpm-lock.yaml` mention does not count).
+      Expected: `grep -cwE "apps/ccusage|npm" .agents/skills/development/SKILL.md .agents/skills/development/references/commands.md` prints `0` for both (`-w` so the kept `pnpm-lock.yaml` mention does not count).
 
 - [ ] **Step 5: Edit `testing/SKILL.md` and `docs/SKILL.md`** — testing: "Node" section → ".NET: MSTest in `dotnet/tests/Ccusage.Mcp.Tests`, FakeEngine, fixtures under `dotnet/tests/fixtures`, e2e via `CCUSAGE_MCP_E2E_SERVER`/`CCUSAGE_ENGINE`; the one remaining Node test is `nix/tools/models-dev-gen/compact.test.ts` (`just test-node`)"; description mentions MSTest. docs: surfaces → root `README.md`, `docs/guide/` incl. `docs/guide/mcp.md`, VitePress nav, `plugin/skills/ccusage/SKILL.md`; delete the two `apps/ccusage` bullets.
-Expected: `grep -cE "apps/ccusage|node-test" .agents/skills/testing/SKILL.md .agents/skills/docs/SKILL.md` prints `0` for both.
+      Expected: `grep -cE "apps/ccusage|node-test" .agents/skills/testing/SKILL.md .agents/skills/docs/SKILL.md` prints `0` for both.
 
 - [ ] **Step 6: Fix the remaining dangling references**
 
@@ -2157,13 +2185,14 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 16: README and docs site rewrite
 
-**Implementer:** Opus  **Reviewer:** Opus
+**Implementer:** Opus **Reviewer:** Opus
 
 **Phase 0 dependency:** Task 0 step 18 (reconnect sentence in troubleshooting).
 
 **Goal:** §3.4 exactly, plus §16.8.
 
 **Files:**
+
 - Modify: `README.md`, `docs/index.md`, `docs/.vitepress/config.ts`, `docs/guide/installation.md`, `docs/guide/getting-started.md`, `docs/guide/index.md`, `docs/guide/{amp,codebuff,copilot,droid,hermes,kilo,openclaw,opencode,pi,qwen}/index.md`
 - Create: `docs/guide/mcp.md`
 - Delete: `docs/guide/sponsors.md`
@@ -2179,10 +2208,10 @@ For each listed guide: `npx ccusage@latest ` → `ccusage `, `bunx ccusage ` →
 Expected: `grep -rnE "npx ccusage|bunx ccusage" docs/guide` prints nothing.
 
 - [ ] **Step 3: Rewrite `docs/guide/installation.md`** — mirror README `## Installation` (four options), a `## Development` section (Nix/direnv/just + `dotnet/` commands), `## Verification` (`ccusage --version`, `ccusage-mcp --version`), `## Updating` (`/plugin update ccusage@ccusage`; re-download the archive), `## Troubleshooting` (macOS quarantine; engine not found → `CCUSAGE_ENGINE`), `## Next Steps` (links kept). Drop runtime comparison, Node/Bun requirements, npm sections.
-Expected: `grep -ciwE "npm|bunx|node" docs/guide/installation.md` prints `0` (`-w` so a `pnpm` docs-build mention in `## Development` does not count; allow `Node` only if it appears in an unrelated kept sentence — none expected).
+      Expected: `grep -ciwE "npm|bunx|node" docs/guide/installation.md` prints `0` (`-w` so a `pnpm` docs-build mention in `## Development` does not count; allow `Node` only if it appears in an unrelated kept sentence — none expected).
 
 - [ ] **Step 4: Rewrite `docs/guide/getting-started.md`** — Prerequisites (Claude Code or another MCP client, or the standalone CLI); Quick Start = README's; keep "Your First Report", "Understanding the Output", "Next Steps", "Common Use Cases" (commands as `ccusage …`), "Troubleshooting", "Custom Data Directory", "Getting Help" (GitHub link → `Desulation/ccusage`; add "ask Claude: `/ccusage --help`-style questions go through the `list-sources` tool"). Delete the Nix/npx/pnpm/pkg.pr.new code group and the bunx tip.
-Expected: `grep -cE "bunx|npx|pkg.pr.new|nix run" docs/guide/getting-started.md` prints `0`.
+      Expected: `grep -cE "bunx|npx|pkg.pr.new|nix run" docs/guide/getting-started.md` prints `0`.
 
 - [ ] **Step 5: Fix `docs/guide/index.md`** — its one `npx`/`bunx` line → `ccusage`. Expected: no `npx`/`bunx` in the file.
 
@@ -2219,7 +2248,7 @@ git commit -F <scratchpad>/commit-msg.txt
 
 ### Task 17: Final consistency pass
 
-**Implementer:** Opus  **Reviewer:** Fable
+**Implementer:** Opus **Reviewer:** Fable
 
 **Goal:** Confirm the success criteria that can be checked locally; hand a clean branch to the human.
 

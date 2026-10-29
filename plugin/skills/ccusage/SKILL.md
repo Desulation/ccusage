@@ -1,7 +1,7 @@
 ---
 name: ccusage
 description: Show coding-agent token usage and cost reports (Claude Code, Codex, OpenCode and 15 more) by day, week, month, session or billing block through the ccusage MCP server.
-argument-hint: "[source] [report] [--flags]"
+argument-hint: '[source] [report] [--flags]'
 allowed-tools: mcp__plugin_ccusage_ccusage__report
 ---
 

@@ -59,38 +59,38 @@ work lives in new paths (`dotnet/`, `plugin/`, `.claude-plugin/`, new workflows)
 
 ### 3.1 Removed
 
-| Path | Reason |
-|---|---|
-| `apps/ccusage/` (except fixtures, see §3.3) | npm package, `cli.js` launcher, TS tests, packaging and npm-launcher benchmark scripts |
-| `packages/ccusage-*` (6 dirs) | platform binary npm packages |
-| `pnpm-lock.yaml` (regenerated, see §3.2), `.oxlintrc.json`, `.oxfmtrc.json` | JS workspace lint/format for removed packages |
-| `.github/scripts/npm-registry-gate.nu` | npm publish gate |
-| `.github/workflows/{pr-gate,issue-gate,gate-close-pr,approve-contributor,pullfrog,autofix}.y*ml` | upstream contribution-gate automation (needs upstream apps/secrets) |
-| `.github/scripts/contribution-gate*`, `.github/APPROVED_CONTRIBUTORS` | used only by the above |
-| `.github/workflows/update-pricing.yaml` | pricing arrives via upstream sync; running it here conflicts with upstream's identical commits |
-| `.github/workflows/check-links.yaml` | low value; docs build is checked in CI |
-| `nix/tools/publint/` and its references | lints npm packages before publish |
-| `.github/actions/build-*-native-package` npm staging steps | replaced by engine build steps (§9.1) |
-| `.agents/skills/typescript`, `.agents/skills/testing/references/node-test.md` | describe removed TS launcher; replaced by a `dotnet` skill |
+| Path                                                                                             | Reason                                                                                         |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `apps/ccusage/` (except fixtures, see §3.3)                                                      | npm package, `cli.js` launcher, TS tests, packaging and npm-launcher benchmark scripts         |
+| `packages/ccusage-*` (6 dirs)                                                                    | platform binary npm packages                                                                   |
+| `pnpm-lock.yaml` (regenerated, see §3.2), `.oxlintrc.json`, `.oxfmtrc.json`                      | JS workspace lint/format for removed packages                                                  |
+| `.github/scripts/npm-registry-gate.nu`                                                           | npm publish gate                                                                               |
+| `.github/workflows/{pr-gate,issue-gate,gate-close-pr,approve-contributor,pullfrog,autofix}.y*ml` | upstream contribution-gate automation (needs upstream apps/secrets)                            |
+| `.github/scripts/contribution-gate*`, `.github/APPROVED_CONTRIBUTORS`                            | used only by the above                                                                         |
+| `.github/workflows/update-pricing.yaml`                                                          | pricing arrives via upstream sync; running it here conflicts with upstream's identical commits |
+| `.github/workflows/check-links.yaml`                                                             | low value; docs build is checked in CI                                                         |
+| `nix/tools/publint/` and its references                                                          | lints npm packages before publish                                                              |
+| `.github/actions/build-*-native-package` npm staging steps                                       | replaced by engine build steps (§9.1)                                                          |
+| `.agents/skills/typescript`, `.agents/skills/testing/references/node-test.md`                    | describe removed TS launcher; replaced by a `dotnet` skill                                     |
 
 ### 3.2 Modified (upstream files — keep edits minimal)
 
-| Path | Change |
-|---|---|
-| `package.json` (root) | Keep as version source and pnpm workspace root for `docs/` only: keep `name`, `version`, `description`, `license`, `private`; `workspaces: ["docs"]`; drop `scripts` and `packageManager` bootstrap (pnpm is pinned by Nix) |
-| `pnpm-workspace.yaml` | `packages: [docs]`; keep security settings and the `docs` catalog; drop the `types` catalog entries no longer used |
-| `pnpm-lock.yaml` | regenerated for the docs-only workspace |
-| `package.nix` | read `name`/meta from root `package.json` instead of `apps/ccusage/package.json` |
-| `config-schema.json` | moved from `apps/ccusage/config-schema.json` to repo root |
-| `nix/checks.nix`, `nix/treefmt.nix`, `nix/git-hooks.nix`, `justfile`, `ccusage.example.json`, `docs/package.json` | point at root `config-schema.json`; drop `mod ccusage`, the launcher Node test (keep `nix/tools/models-dev-gen` test), large-fixture generator recipe |
-| `.github/workflows/ci.yaml`, `release.yaml` | rewritten per §9 |
-| `.github/workflows/check-pr-title.yaml` | keep only the Conventional Commits check; drop the adapter-scope job |
-| `.github/actions/setup-nix-cache` | drop Blacksmith sticky-disk usage |
-| `.tagpr` | `versionFile` per §8 |
-| `AGENTS.md`, `apps/ccusage/AGENTS.md` references, `.agents/skills/{development,testing,docs}` | describe the C# layer instead of the npm layer |
-| `docs/guide/**` + new `docs/guide/mcp.md` | per §3.4 |
-| `README.md` (symlink into `apps/ccusage/`) | becomes a real root `README.md`, rewritten per §3.4 |
-| `LICENSE` (symlink to `apps/ccusage/LICENSE`) | becomes a real root `LICENSE` file, content unchanged (MIT) |
+| Path                                                                                                              | Change                                                                                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json` (root)                                                                                             | Keep as version source and pnpm workspace root for `docs/` only: keep `name`, `version`, `description`, `license`, `private`; `workspaces: ["docs"]`; drop `scripts` and `packageManager` bootstrap (pnpm is pinned by Nix) |
+| `pnpm-workspace.yaml`                                                                                             | `packages: [docs]`; keep security settings and the `docs` catalog; drop the `types` catalog entries no longer used                                                                                                          |
+| `pnpm-lock.yaml`                                                                                                  | regenerated for the docs-only workspace                                                                                                                                                                                     |
+| `package.nix`                                                                                                     | read `name`/meta from root `package.json` instead of `apps/ccusage/package.json`                                                                                                                                            |
+| `config-schema.json`                                                                                              | moved from `apps/ccusage/config-schema.json` to repo root                                                                                                                                                                   |
+| `nix/checks.nix`, `nix/treefmt.nix`, `nix/git-hooks.nix`, `justfile`, `ccusage.example.json`, `docs/package.json` | point at root `config-schema.json`; drop `mod ccusage`, the launcher Node test (keep `nix/tools/models-dev-gen` test), large-fixture generator recipe                                                                       |
+| `.github/workflows/ci.yaml`, `release.yaml`                                                                       | rewritten per §9                                                                                                                                                                                                            |
+| `.github/workflows/check-pr-title.yaml`                                                                           | keep only the Conventional Commits check; drop the adapter-scope job                                                                                                                                                        |
+| `.github/actions/setup-nix-cache`                                                                                 | drop Blacksmith sticky-disk usage                                                                                                                                                                                           |
+| `.tagpr`                                                                                                          | `versionFile` per §8                                                                                                                                                                                                        |
+| `AGENTS.md`, `apps/ccusage/AGENTS.md` references, `.agents/skills/{development,testing,docs}`                     | describe the C# layer instead of the npm layer                                                                                                                                                                              |
+| `docs/guide/**` + new `docs/guide/mcp.md`                                                                         | per §3.4                                                                                                                                                                                                                    |
+| `README.md` (symlink into `apps/ccusage/`)                                                                        | becomes a real root `README.md`, rewritten per §3.4                                                                                                                                                                         |
+| `LICENSE` (symlink to `apps/ccusage/LICENSE`)                                                                     | becomes a real root `LICENSE` file, content unchanged (MIT)                                                                                                                                                                 |
 
 `rust/` is **not** modified.
 
@@ -179,19 +179,19 @@ Single project `dotnet/src/Ccusage.Mcp`, assembly/executable name `ccusage-mcp`.
 with `PublishAot=true`, `InvariantGlobalization=true`, `IsAotCompatible=true`, trimming
 warnings as errors. Logging to **stderr only** (stdout carries MCP JSON-RPC).
 
-| Unit | Responsibility | Depends on |
-|---|---|---|
-| `Program.cs` | Host setup (`Host.CreateApplicationBuilder`), `AddMcpServer().WithStdioServerTransport()` plus the custom handlers below; `--version` prints server and engine versions | Microsoft.Extensions.Hosting, ModelContextProtocol |
-| `Engine/EngineLocator` | Resolve the Rust engine (§6.1) | System.Runtime.InteropServices |
-| `Engine/EngineRunner` | Run the engine without a shell (§6.2) | System.Diagnostics.Process |
-| `Commands/CommandCatalog` | Source/report/option model built from the embedded upstream JSON files plus a C# type table (§4.1) | embedded resources |
-| `Commands/CommandRequest` | Normalized request: source, report, ordered option values | — |
-| `Commands/CommandValidator` | Validate a request against the catalog; build the engine argv | CommandCatalog |
-| `Commands/CliArgsParser` | Tokenize and parse CLI-style text into a `CommandRequest` (for `report` and the prompt) | CommandValidator |
-| `Tools/ToolDefinitions` | Generate MCP tool definitions and JSON input schemas from the catalog | CommandCatalog |
-| `Tools/ToolHandlers` | `tools/list` and `tools/call` handlers; JSON arguments → `CommandRequest` → engine → result | Commands, Engine |
-| `Prompts/PromptHandlers` | `prompts/list` and `prompts/get` for the `ccusage` prompt | Commands, Engine |
-| `Json/McpJsonContext` | System.Text.Json source-generated context for every serialized type | System.Text.Json |
+| Unit                        | Responsibility                                                                                                                                                          | Depends on                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `Program.cs`                | Host setup (`Host.CreateApplicationBuilder`), `AddMcpServer().WithStdioServerTransport()` plus the custom handlers below; `--version` prints server and engine versions | Microsoft.Extensions.Hosting, ModelContextProtocol |
+| `Engine/EngineLocator`      | Resolve the Rust engine (§6.1)                                                                                                                                          | System.Runtime.InteropServices                     |
+| `Engine/EngineRunner`       | Run the engine without a shell (§6.2)                                                                                                                                   | System.Diagnostics.Process                         |
+| `Commands/CommandCatalog`   | Source/report/option model built from the embedded upstream JSON files plus a C# type table (§4.1)                                                                      | embedded resources                                 |
+| `Commands/CommandRequest`   | Normalized request: source, report, ordered option values                                                                                                               | —                                                  |
+| `Commands/CommandValidator` | Validate a request against the catalog; build the engine argv                                                                                                           | CommandCatalog                                     |
+| `Commands/CliArgsParser`    | Tokenize and parse CLI-style text into a `CommandRequest` (for `report` and the prompt)                                                                                 | CommandValidator                                   |
+| `Tools/ToolDefinitions`     | Generate MCP tool definitions and JSON input schemas from the catalog                                                                                                   | CommandCatalog                                     |
+| `Tools/ToolHandlers`        | `tools/list` and `tools/call` handlers; JSON arguments → `CommandRequest` → engine → result                                                                             | Commands, Engine                                   |
+| `Prompts/PromptHandlers`    | `prompts/list` and `prompts/get` for the `ccusage` prompt                                                                                                               | Commands, Engine                                   |
+| `Json/McpJsonContext`       | System.Text.Json source-generated context for every serialized type                                                                                                     | System.Text.Json                                   |
 
 Tools and prompts are registered through the SDK's list/call handler hooks with schemas
 generated from catalog data — no reflection-based attribute discovery. This keeps exact
@@ -255,19 +255,19 @@ parameters are optional unless marked required.
 
 Options by page, as of this upstream snapshot (the catalog is authoritative):
 
-| Applies to | Options |
-|---|---|
-| every report page | `since`, `until` (YYYY-MM-DD or YYYYMMDD), `timezone` (IANA), `offline`, `config` |
-| `all` and all non-Claude sources | `no-cost` |
-| `all` | `sections` (csv: daily, weekly, monthly, session), `by-agent` |
-| `daily`/`weekly`/`monthly` pages | `last` (int ≥ 1) |
-| `session` for `all`, `claude`, `codex` | `id` |
-| `weekly` for `all`, `claude` | `start-of-week` |
-| `claude` (all reports) | `mode`, `order`, `breakdown`, `debug`, `debug-samples`, `single-thread` |
-| `claude daily` | `instances`, `project`, `project-aliases` |
-| `codex` | `speed` |
-| `pi` | `pi-path` |
-| `openclaw` | `open-claw-path` |
+| Applies to                             | Options                                                                           |
+| -------------------------------------- | --------------------------------------------------------------------------------- |
+| every report page                      | `since`, `until` (YYYY-MM-DD or YYYYMMDD), `timezone` (IANA), `offline`, `config` |
+| `all` and all non-Claude sources       | `no-cost`                                                                         |
+| `all`                                  | `sections` (csv: daily, weekly, monthly, session), `by-agent`                     |
+| `daily`/`weekly`/`monthly` pages       | `last` (int ≥ 1)                                                                  |
+| `session` for `all`, `claude`, `codex` | `id`                                                                              |
+| `weekly` for `all`, `claude`           | `start-of-week`                                                                   |
+| `claude` (all reports)                 | `mode`, `order`, `breakdown`, `debug`, `debug-samples`, `single-thread`           |
+| `claude daily`                         | `instances`, `project`, `project-aliases`                                         |
+| `codex`                                | `speed`                                                                           |
+| `pi`                                   | `pi-path`                                                                         |
+| `openclaw`                             | `open-claw-path`                                                                  |
 
 ### 5.2 `blocks`
 
@@ -370,16 +370,16 @@ emulation, use `IsWow64Process2` through a source-generated `[LibraryImport]` (A
 
 ```json
 {
-  "name": "ccusage",
-  "owner": { "name": "Desulation" },
-  "plugins": [
-    {
-      "name": "ccusage",
-      "source": "./plugin",
-      "description": "Coding-agent CLI token usage and cost reports over MCP",
-      "mcpServers": "https://github.com/Desulation/ccusage/releases/download/v<version>/ccusage.mcpb"
-    }
-  ]
+	"name": "ccusage",
+	"owner": { "name": "Desulation" },
+	"plugins": [
+		{
+			"name": "ccusage",
+			"source": "./plugin",
+			"description": "Coding-agent CLI token usage and cost reports over MCP",
+			"mcpServers": "https://github.com/Desulation/ccusage/releases/download/v<version>/ccusage.mcpb"
+		}
+	]
 }
 ```
 
@@ -423,24 +423,24 @@ ccusage.mcpb (zip)
 
 ```json
 {
-  "manifest_version": "0.3",
-  "name": "ccusage",
-  "version": "<version>",
-  "description": "Coding-agent CLI token usage and cost reports",
-  "author": { "name": "Desulation" },
-  "license": "MIT",
-  "server": {
-    "type": "binary",
-    "entry_point": "launch.sh",
-    "mcp_config": {
-      "command": "/bin/sh",
-      "args": ["${__dirname}/launch.sh"],
-      "platform_overrides": {
-        "win32": { "command": "${__dirname}/win/ccusage-mcp.exe", "args": [] }
-      }
-    }
-  },
-  "compatibility": { "platforms": ["darwin", "linux", "win32"] }
+	"manifest_version": "0.3",
+	"name": "ccusage",
+	"version": "<version>",
+	"description": "Coding-agent CLI token usage and cost reports",
+	"author": { "name": "Desulation" },
+	"license": "MIT",
+	"server": {
+		"type": "binary",
+		"entry_point": "launch.sh",
+		"mcp_config": {
+			"command": "/bin/sh",
+			"args": ["${__dirname}/launch.sh"],
+			"platform_overrides": {
+				"win32": { "command": "${__dirname}/win/ccusage-mcp.exe", "args": [] }
+			}
+		}
+	},
+	"compatibility": { "platforms": ["darwin", "linux", "win32"] }
 }
 ```
 
@@ -470,14 +470,14 @@ pinned by commit SHA.
 
 ### 9.1 Build matrix (shared by CI and release)
 
-| RID | Runner | Engine build | Server build |
-|---|---|---|---|
-| linux-x64 | `ubuntu-latest` | `nix build .#ccusage-static` | `dotnet publish -r linux-x64` |
-| linux-arm64 | `ubuntu-24.04-arm` | `nix build .#ccusage-static` | `dotnet publish -r linux-arm64` |
-| osx-arm64 | `macos-latest` | native Nix build | `dotnet publish -r osx-arm64` |
-| osx-x64 | `macos-15-intel` | `cargo build --release` | `dotnet publish -r osx-x64` |
-| win-x64 | `windows-latest` | `cargo build --release` | `dotnet publish -r win-x64` |
-| win-arm64 | `windows-11-arm` | `cargo build --release` | not built (bundle ships win-x64 server); the per-platform archive pairs the win-x64 server with the arm64 engine |
+| RID         | Runner             | Engine build                 | Server build                                                                                                     |
+| ----------- | ------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| linux-x64   | `ubuntu-latest`    | `nix build .#ccusage-static` | `dotnet publish -r linux-x64`                                                                                    |
+| linux-arm64 | `ubuntu-24.04-arm` | `nix build .#ccusage-static` | `dotnet publish -r linux-arm64`                                                                                  |
+| osx-arm64   | `macos-latest`     | native Nix build             | `dotnet publish -r osx-arm64`                                                                                    |
+| osx-x64     | `macos-15-intel`   | `cargo build --release`      | `dotnet publish -r osx-x64`                                                                                      |
+| win-x64     | `windows-latest`   | `cargo build --release`      | `dotnet publish -r win-x64`                                                                                      |
+| win-arm64   | `windows-11-arm`   | `cargo build --release`      | not built (bundle ships win-x64 server); the per-platform archive pairs the win-x64 server with the arm64 engine |
 
 The existing `build-*-native-package` composite actions are reworked to build and upload
 the engine binary without npm staging. Each matrix job uploads `ccusage-mcp-<rid>` and
@@ -566,16 +566,16 @@ Undocumented behaviors the design depends on, each with a decision rule. The spi
 throwaway: a hand-built bundle containing a minimal AOT stdio server, installed as a local
 plugin.
 
-| # | Question | If the answer is "no" |
-|---|---|---|
-| 1 | Does Claude Code honor `platform_overrides` in a plugin-referenced `.mcpb`? | Fall back to per-platform marketplace entries (four: windows, macos with universal binaries, linux-x64, linux-arm64). Requires user sign-off. |
-| 2 | Does it substitute `${__dirname}` in `mcp_config`? | Use whatever bundle-relative mechanism it supports; else fallback 1. |
-| 3 | Is the bundle fully downloaded and extracted before the server first starts? | Document the one-time `/mcp` reconnect in the skill's error path. |
-| 4 | Are executable bits preserved on Linux/macOS extraction? | `launch.sh` restores `+x`; ensure `launch.sh` itself runs through `/bin/sh` (no `+x` needed). |
-| 5 | Does `RuntimeInformation.OSArchitecture` report `Arm64` under x64 emulation on Windows ARM64? | Use `IsWow64Process2` via `[LibraryImport]` (§6.1). |
-| 6 | Can the MCP C# SDK 2.3.0 register list/call handlers with source-generated JSON under Native AOT with zero warnings? | Investigate before continuing; no third-party alternative without approval. |
-| 7 | Which marketplace/manifest field placement for `mcpServers` passes `claude plugin validate --strict`? | Adjust §7.1 to the passing form. |
-| 8 | Actual compressed bundle size. | Informational. |
+| #   | Question                                                                                                             | If the answer is "no"                                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Does Claude Code honor `platform_overrides` in a plugin-referenced `.mcpb`?                                          | Fall back to per-platform marketplace entries (four: windows, macos with universal binaries, linux-x64, linux-arm64). Requires user sign-off. |
+| 2   | Does it substitute `${__dirname}` in `mcp_config`?                                                                   | Use whatever bundle-relative mechanism it supports; else fallback 1.                                                                          |
+| 3   | Is the bundle fully downloaded and extracted before the server first starts?                                         | Document the one-time `/mcp` reconnect in the skill's error path.                                                                             |
+| 4   | Are executable bits preserved on Linux/macOS extraction?                                                             | `launch.sh` restores `+x`; ensure `launch.sh` itself runs through `/bin/sh` (no `+x` needed).                                                 |
+| 5   | Does `RuntimeInformation.OSArchitecture` report `Arm64` under x64 emulation on Windows ARM64?                        | Use `IsWow64Process2` via `[LibraryImport]` (§6.1).                                                                                           |
+| 6   | Can the MCP C# SDK 2.3.0 register list/call handlers with source-generated JSON under Native AOT with zero warnings? | Investigate before continuing; no third-party alternative without approval.                                                                   |
+| 7   | Which marketplace/manifest field placement for `mcpServers` passes `claude plugin validate --strict`?                | Adjust §7.1 to the passing form.                                                                                                              |
+| 8   | Actual compressed bundle size.                                                                                       | Informational.                                                                                                                                |
 
 Findings are written into this spec (as an addendum) before implementation proceeds past
 Phase 0. Any fallback that changes user-visible behavior needs the user's approval.
@@ -630,18 +630,19 @@ server (`phase0/spike`), a hand-built bundle laid out as in §7.3 (`phase0/bundl
 (`phase0/plugin-local`) loaded with `claude -p --plugin-dir`. Nothing was installed into the
 Claude Code configuration.
 
-| # | Question | Answer | Evidence | Consequence |
-|---|---|---|---|---|
-| 1 | platform_overrides honored | yes | Headless session `claude -p "Call the ping tool from the ccusage MCP server once and print its exact result." --debug --debug-file phase0/claude-debug-file.log --plugin-dir phase0/plugin-local --allowedTools "mcp__plugin_ccusage_ccusage__ping"` (run from empty `phase0/scratch`; `plugin.json` has `"mcpServers": "./ccusage.mcpb"`). The process Claude Code started was `ccusage-mcp.exe`, not `/bin/sh` (`Win32_Process` capture: `name=ccusage-mcp.exe ExecutablePath=…\phase0\plugin-local\.mcpb-cache\6746a2438180a35d\win\ccusage-mcp.exe`). Debug log: `MCP server "plugin:ccusage:ccusage": Successfully connected (transport: stdio) in 173ms`, `Calling MCP tool: ping`, `Tool 'ping' completed successfully in 3ms`; stdout: `pong`. | none |
-| 2 | ${__dirname} substituted | yes | Captured command line: `C:\Users\gman2\source\AiTesting\ccusage-csharp\phase0\plugin-local\.mcpb-cache\6746a2438180a35d/win/ccusage-mcp.exe`, i.e. `${__dirname}` = the extraction directory (separators mixed, `\` from the path and `/` from the manifest; Windows accepts it). Debug log: `Extracted 13 files to …\phase0\plugin-local\.mcpb-cache\6746a2438180a35d`. With `--plugin-dir` the bundle is extracted to `<plugin dir>/.mcpb-cache/<content hash>/`, and a later load logs `Using cached MCPB from …`. | none |
-| 3 | extracted before first start | unverified (local bundle only) | With a local `./ccusage.mcpb` the load is sequential: `MCPB [ccusage]: Extraction complete (13 files)` at 08:22:25.276Z, then `MCP server "plugin:ccusage:ccusage": Starting connection` at 08:22:25.531Z, and the server process appears at 08:22:25.645 (local time 04:22:25.645). The download timing of an `https://` bundle URL cannot be observed locally: unverified, checked on the first release. | The skill's error path and `docs/guide/mcp.md` troubleshooting mention the one-time `/mcp` reconnect preemptively — REQUIRES HUMAN APPROVAL |
-| 4 | exec bits preserved | pending CI | Q4: not observable on Windows. The spike zip was built with Python `zipfile` on Windows and stored no exec bits: its `linux/**` and `osx/**` entries carry mode `0100666` (only the `.exe` entries are `0100777`). Task 10 must build the bundle with `zip -X -r` (Info-ZIP on Linux/macOS, after `chmod +x`), not Python `zipfile` or `Compress-Archive`. Info-ZIP records unix modes in the external attributes, and `-X` only drops the extra uid/gid/timestamp fields. `launch.sh` restores `+x`; Task 11b's `bundle-smoke` jobs on ubuntu-latest and macos-latest assert the exec bits after extraction (**pending CI**). Claude Code's own extractor remains unverified until the plugin is installed on Linux/macOS. | launch.sh chmod stays |
-| 5 | OSArchitecture under emulation | yes (runtime source) / pending CI | [`RuntimeInformation.Windows.cs` (release/10.0)](https://github.com/dotnet/runtime/blob/release/10.0/src/libraries/System.Private.CoreLib/src/System/Runtime/InteropServices/RuntimeInformation.Windows.cs): `OSArchitecture` resolves `IsWow64Process2` from kernel32 and maps its *native machine* output (`0xAA64` → `Arm64`), falling back to `GetNativeSystemInfo` only where `IsWow64Process2` is missing (pre-Windows 10). The native machine is the host's, so an x64 process on Windows ARM64 gets `Arm64`. Task 11b's `bundle-smoke` leg on `windows-11-arm` asserts the win-x64 server selects `win\arm64\ccusage.exe` (**pending CI**). | Task 5 step 7 needed: no (unless the CI leg fails) |
-| 6 | SDK 2.3.0 handlers AOT-clean | yes | `dotnet build phase0/spike -c Release`: `0 Warning(s)`; clean `dotnet publish phase0/spike -r win-x64 -c Release` (with `PublishAot`, `IsAotCompatible`, `TrimmerSingleWarn=false`, `IlcTreatWarningsAsErrors=true`): exit 0, `grep -c "warning IL" phase0/publish.log` → `0`; 11,576,832-byte `ccusage-mcp.exe`. Piped `initialize` returns `{"result":{"protocolVersion":"2025-06-18","capabilities":{"logging":{},"prompts":{},"tools":{}},"serverInfo":{"name":"ccusage","version":"0.0.0-spike"}},"id":1,"jsonrpc":"2.0"}`; `tools/list`, `tools/call` (`pong`, and `isError:true` for an unknown tool), `prompts/list` and `prompts/get` all answer from the AOT binary. API: `IMcpServerBuilder.WithListToolsHandler/WithCallToolHandler/WithListPromptsHandler/WithGetPromptHandler` (extension class `Microsoft.Extensions.DependencyInjection.McpServerBuilderExtensions`; the same delegates are the `McpServerOptions.Handlers.*Handler` properties of `McpServerHandlers`). Delegate: `McpRequestHandler<TParams,TResult>` = `ValueTask<TResult> (RequestContext<TParams> request, CancellationToken cancellationToken)`. `RequestContext<T>.Params` is `T?`; `CallToolRequestParams.Name` is `string` (non-null); `CallToolRequestParams.Arguments` is `IDictionary<string, JsonElement>?`. `Tool.InputSchema` is `JsonElement`. Options: `ModelContextProtocol.McpJsonUtilities.DefaultOptions` (`JsonSerializerOptions`). Custom types serialize through our own `[JsonSerializable]` context. | Task 7a/7b use these names |
-| 7 | mcpServers placement | entry (manifest also passes) | `claude plugin validate --strict phase0/marketplace` (entry `"mcpServers": "file:///C:/Users/gman2/source/AiTesting/ccusage-csharp/phase0/ccusage.mcpb"`) first failed only on `description: No marketplace description provided` (strict treats the warning as an error); with a top-level `"description"` added: `✔ Validation passed`. `claude plugin validate --strict phase0/marketplace/plugin`: `✔ Validation passed`. `file://` is accepted; an `https://…/releases/download/v0.0.0/ccusage.mcpb` entry also passes; a non-string value fails (`plugins.0.mcpServers: Invalid input`), so the field is checked. `mcpServers` in `plugin.json` also passes (`file://`, or `./ccusage.mcpb` when the file exists; a missing relative file fails with `Path not found`). Only the `plugin.json` placement was exercised at runtime (`--plugin-dir`); the entry placement is validated, not loaded. | §7.1 keeps the entry placement and adds a top-level marketplace `"description"`; Task 9 |
-| 8 | bundle size | 32.8 MiB (spike) | `phase0/ccusage.mcpb` = 34,373,029 bytes (Python `zipfile`, deflate). Per file (size / compressed): `win/ccusage-mcp.exe` 11,576,832 / 4,120,017; `win/x64/ccusage.exe` and `win/arm64/ccusage.exe` 4,464,640 / 2,295,008 each; `linux/{x64,arm64}` and `osx/{x64,arm64}` placeholders repeat those two sizes; `manifest.json` 557 / 299; `launch.sh` 557 / 293. 13 files in all (two Windows binaries, copied as placeholders). Count correction: §7.3 has 13 files (`manifest.json`, `launch.sh`, 11 binaries) and 11 distinct binaries (5 servers: win-x64, linux-x64, linux-arm64, osx-x64, osx-arm64; 6 engines: win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64). The plan's "15 files" and "eight distinct binaries" figures are wrong. Claude Code also reported `Extraction complete (13 files)`. | real size from CI bundle job |
+| #   | Question                       | Answer                            | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Consequence                                                                                                                                 |
+| --- | ------------------------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | platform_overrides honored     | yes                               | Headless session `claude -p "Call the ping tool from the ccusage MCP server once and print its exact result." --debug --debug-file phase0/claude-debug-file.log --plugin-dir phase0/plugin-local --allowedTools "mcp__plugin_ccusage_ccusage__ping"` (run from empty `phase0/scratch`; `plugin.json` has `"mcpServers": "./ccusage.mcpb"`). The process Claude Code started was `ccusage-mcp.exe`, not `/bin/sh` (`Win32_Process` capture: `name=ccusage-mcp.exe ExecutablePath=…\phase0\plugin-local\.mcpb-cache\6746a2438180a35d\win\ccusage-mcp.exe`). Debug log: `MCP server "plugin:ccusage:ccusage": Successfully connected (transport: stdio) in 173ms`, `Calling MCP tool: ping`, `Tool 'ping' completed successfully in 3ms`; stdout: `pong`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | none                                                                                                                                        |
+| 2   | ${__dirname} substituted       | yes                               | Captured command line: `C:\Users\gman2\source\AiTesting\ccusage-csharp\phase0\plugin-local\.mcpb-cache\6746a2438180a35d/win/ccusage-mcp.exe`, i.e. `${__dirname}` = the extraction directory (separators mixed, `\` from the path and `/` from the manifest; Windows accepts it). Debug log: `Extracted 13 files to …\phase0\plugin-local\.mcpb-cache\6746a2438180a35d`. With `--plugin-dir` the bundle is extracted to `<plugin dir>/.mcpb-cache/<content hash>/`, and a later load logs `Using cached MCPB from …`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | none                                                                                                                                        |
+| 3   | extracted before first start   | unverified (local bundle only)    | With a local `./ccusage.mcpb` the load is sequential: `MCPB [ccusage]: Extraction complete (13 files)` at 08:22:25.276Z, then `MCP server "plugin:ccusage:ccusage": Starting connection` at 08:22:25.531Z, and the server process appears at 08:22:25.645 (local time 04:22:25.645). The download timing of an `https://` bundle URL cannot be observed locally: unverified, checked on the first release.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | The skill's error path and `docs/guide/mcp.md` troubleshooting mention the one-time `/mcp` reconnect preemptively — REQUIRES HUMAN APPROVAL |
+| 4   | exec bits preserved            | pending CI                        | Q4: not observable on Windows. The spike zip was built with Python `zipfile` on Windows and stored no exec bits: its `linux/**` and `osx/**` entries carry mode `0100666` (only the `.exe` entries are `0100777`). Task 10 must build the bundle with `zip -X -r` (Info-ZIP on Linux/macOS, after `chmod +x`), not Python `zipfile` or `Compress-Archive`. Info-ZIP records unix modes in the external attributes, and `-X` only drops the extra uid/gid/timestamp fields. `launch.sh` restores `+x`; Task 11b's `bundle-smoke` jobs on ubuntu-latest and macos-latest assert the exec bits after extraction (**pending CI**). Claude Code's own extractor remains unverified until the plugin is installed on Linux/macOS.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | launch.sh chmod stays                                                                                                                       |
+| 5   | OSArchitecture under emulation | yes (runtime source) / pending CI | [`RuntimeInformation.Windows.cs` (release/10.0)](https://github.com/dotnet/runtime/blob/release/10.0/src/libraries/System.Private.CoreLib/src/System/Runtime/InteropServices/RuntimeInformation.Windows.cs): `OSArchitecture` resolves `IsWow64Process2` from kernel32 and maps its _native machine_ output (`0xAA64` → `Arm64`), falling back to `GetNativeSystemInfo` only where `IsWow64Process2` is missing (pre-Windows 10). The native machine is the host's, so an x64 process on Windows ARM64 gets `Arm64`. Task 11b's `bundle-smoke` leg on `windows-11-arm` asserts the win-x64 server selects `win\arm64\ccusage.exe` (**pending CI**).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Task 5 step 7 needed: no (unless the CI leg fails)                                                                                          |
+| 6   | SDK 2.3.0 handlers AOT-clean   | yes                               | `dotnet build phase0/spike -c Release`: `0 Warning(s)`; clean `dotnet publish phase0/spike -r win-x64 -c Release` (with `PublishAot`, `IsAotCompatible`, `TrimmerSingleWarn=false`, `IlcTreatWarningsAsErrors=true`): exit 0, `grep -c "warning IL" phase0/publish.log` → `0`; 11,576,832-byte `ccusage-mcp.exe`. Piped `initialize` returns `{"result":{"protocolVersion":"2025-06-18","capabilities":{"logging":{},"prompts":{},"tools":{}},"serverInfo":{"name":"ccusage","version":"0.0.0-spike"}},"id":1,"jsonrpc":"2.0"}`; `tools/list`, `tools/call` (`pong`, and `isError:true` for an unknown tool), `prompts/list` and `prompts/get` all answer from the AOT binary. API: `IMcpServerBuilder.WithListToolsHandler/WithCallToolHandler/WithListPromptsHandler/WithGetPromptHandler` (extension class `Microsoft.Extensions.DependencyInjection.McpServerBuilderExtensions`; the same delegates are the `McpServerOptions.Handlers.*Handler` properties of `McpServerHandlers`). Delegate: `McpRequestHandler<TParams,TResult>` = `ValueTask<TResult> (RequestContext<TParams> request, CancellationToken cancellationToken)`. `RequestContext<T>.Params` is `T?`; `CallToolRequestParams.Name` is `string` (non-null); `CallToolRequestParams.Arguments` is `IDictionary<string, JsonElement>?`. `Tool.InputSchema` is `JsonElement`. Options: `ModelContextProtocol.McpJsonUtilities.DefaultOptions` (`JsonSerializerOptions`). Custom types serialize through our own `[JsonSerializable]` context. | Task 7a/7b use these names                                                                                                                  |
+| 7   | mcpServers placement           | entry (manifest also passes)      | `claude plugin validate --strict phase0/marketplace` (entry `"mcpServers": "file:///C:/Users/gman2/source/AiTesting/ccusage-csharp/phase0/ccusage.mcpb"`) first failed only on `description: No marketplace description provided` (strict treats the warning as an error); with a top-level `"description"` added: `✔ Validation passed`. `claude plugin validate --strict phase0/marketplace/plugin`: `✔ Validation passed`. `file://` is accepted; an `https://…/releases/download/v0.0.0/ccusage.mcpb` entry also passes; a non-string value fails (`plugins.0.mcpServers: Invalid input`), so the field is checked. `mcpServers` in `plugin.json` also passes (`file://`, or `./ccusage.mcpb` when the file exists; a missing relative file fails with `Path not found`). Only the `plugin.json` placement was exercised at runtime (`--plugin-dir`); the entry placement is validated, not loaded.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | §7.1 keeps the entry placement and adds a top-level marketplace `"description"`; Task 9                                                     |
+| 8   | bundle size                    | 32.8 MiB (spike)                  | `phase0/ccusage.mcpb` = 34,373,029 bytes (Python `zipfile`, deflate). Per file (size / compressed): `win/ccusage-mcp.exe` 11,576,832 / 4,120,017; `win/x64/ccusage.exe` and `win/arm64/ccusage.exe` 4,464,640 / 2,295,008 each; `linux/{x64,arm64}` and `osx/{x64,arm64}` placeholders repeat those two sizes; `manifest.json` 557 / 299; `launch.sh` 557 / 293. 13 files in all (two Windows binaries, copied as placeholders). Count correction: §7.3 has 13 files (`manifest.json`, `launch.sh`, 11 binaries) and 11 distinct binaries (5 servers: win-x64, linux-x64, linux-arm64, osx-x64, osx-arm64; 6 engines: win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64). The plan's "15 files" and "eight distinct binaries" figures are wrong. Claude Code also reported `Extraction complete (13 files)`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | real size from CI bundle job                                                                                                                |
 
 ### Environment notes
+
 - AOT publish locally: works. `dotnet publish` through the dotnet MCP tool links with VS 18
   Community `link.exe`. From the agent's Git Bash and PowerShell shells the link step failed
   because VS 18's `vcvarsall.bat` could not find `vswhere.exe` on `PATH` (ILC itself finished
@@ -653,7 +654,7 @@ Claude Code configuration.
 - Stdio smoke tests must hold stdin open. Piping a single request
   (`echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}' | ccusage-mcp.exe`) prints
   nothing on stdout: the `initialize` handler completes (stderr shows `method 'initialize'
-  request handler completed`), but stdin EOF shuts the stdio transport down before the reply
+request handler completed`), but stdin EOF shuts the stdio transport down before the reply
   is written. With stdin kept open (the request followed by about 2 s of open input) exactly
   one result line comes back. Smoke steps must keep stdin open until the expected replies are
   read, or use a real MCP client (`McpClient` + `StdioClientTransport`). Affected plan steps:

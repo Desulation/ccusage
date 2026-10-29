@@ -1,13 +1,13 @@
 {
-  "name": "ccusage",
-  "owner": { "name": "Desulation" },
-  "description": "Coding-agent CLI token usage and cost reports over MCP",
-  "plugins": [
-    {
-      "name": "ccusage",
-      "source": "./plugin",
-      "description": "Coding-agent CLI token usage and cost reports over MCP",
-      "mcpServers": "https://github.com/Desulation/ccusage/releases/download/v20.0.45/ccusage.mcpb"
-    }
-  ]
+	"name": "ccusage",
+	"owner": { "name": "Desulation" },
+	"description": "Coding-agent CLI token usage and cost reports over MCP",
+	"plugins": [
+		{
+			"name": "ccusage",
+			"source": "./plugin",
+			"description": "Coding-agent CLI token usage and cost reports over MCP",
+			"mcpServers": "https://github.com/Desulation/ccusage/releases/download/v20.0.45/ccusage.mcpb"
+		}
+	]
 }
