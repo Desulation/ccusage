@@ -6,6 +6,10 @@ inputs:
   rid:
     description: .NET runtime identifier to publish for (for example linux-x64)
     required: true
+outputs:
+  directory:
+    description: Directory holding the published `ccusage-mcp[.exe]`
+    value: ${{ steps.publish.outputs.directory }}
 runs:
   using: composite
   steps:
@@ -15,7 +19,11 @@ runs:
 
     # Runs from dotnet/ so the SDK resolves dotnet/global.json, the same way
     # local builds and tests do; the repository root has no global.json.
+    # Nothing here depends on the runner's architecture: the SDK restores the
+    # host's ILCompiler and the AOT runtime packages of `rid`, so the Intel
+    # macOS runner publishes osx-arm64 as well as osx-x64.
     - name: Publish AOT server
+      id: publish
       shell: bash
       working-directory: dotnet
       env:
@@ -26,6 +34,7 @@ runs:
           echo "::error::trim/AOT warnings"
           exit 1
         fi
+        echo "directory=$RUNNER_TEMP/server" >> "$GITHUB_OUTPUT"
 
     - name: Drop debug symbols
       shell: bash

@@ -38,14 +38,21 @@ jobs:
             engine: nix-static
             arch: arm64
             server: true
+          # Both macOS legs run on Intel: macos-latest (arm64) runners are
+          # often unavailable for hours, which blocked the whole chain (spec
+          # §16 item 8). osx-arm64 is cross-built for `target`, and `macho`
+          # is the architecture `lipo -archs` must report for both binaries.
           - rid: osx-arm64
-            os: macos-latest
-            engine: nix
-            arch: arm64
+            os: macos-15-intel
+            engine: cargo-mac
+            target: aarch64-apple-darwin
+            macho: arm64
             server: true
           - rid: osx-x64
             os: macos-15-intel
             engine: cargo-mac
+            target: x86_64-apple-darwin
+            macho: x86_64
             server: true
           - rid: win-x64
             os: windows-latest
@@ -74,14 +81,6 @@ jobs:
           cache-scope: ${{ matrix.rid }}
           nix-github-token: ${{ github.event_name != 'pull_request' }}
 
-      - uses: ./.github/actions/build-macos-nix-native-package
-        if: matrix.engine == 'nix'
-        with:
-          arch: arm64
-          binary: result/bin/ccusage
-          cache-scope: ${{ matrix.rid }}
-          rid: ${{ matrix.rid }}
-
       # Only the arm64 leg saves its Cargo cache; see the action for the
       # additional main-only conditions.
       - uses: ./.github/actions/build-windows-native-package
@@ -91,21 +90,25 @@ jobs:
           rid: ${{ matrix.rid }}
           save-cargo-cache: ${{ matrix.arch == 'arm64' }}
 
-      # Intel macOS builds natively with cargo on its own runner. The minimal
-      # profile of the pinned channel is enough for a release build;
+      # Both macOS legs build with cargo on the Intel runner for the leg's
+      # `target`: x86_64 natively, aarch64 cross-compiled (Apple clang and the
+      # SDK are multi-arch). The minimal profile of the pinned channel plus the
+      # target's standard library is enough for a release build;
       # RUSTUP_TOOLCHAIN takes precedence over rust-toolchain.toml, so cargo
       # does not install its extra components.
       - name: Install Rust toolchain
         id: toolchain
         if: matrix.engine == 'cargo-mac'
         shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
           channel="$(sed -n 's/^channel *= *"\([^"]*\)".*/\1/p' rust-toolchain.toml)"
           if [ -z "$channel" ]; then
             echo "::error file=rust-toolchain.toml::no channel found"
             exit 1
           fi
-          rustup toolchain install "$channel" --profile minimal --no-self-update
+          rustup toolchain install "$channel" --profile minimal --no-self-update --target "$TARGET"
           echo "channel=$channel" >> "$GITHUB_OUTPUT"
 
       - name: Build Cargo native binary
@@ -113,19 +116,47 @@ jobs:
         shell: bash
         env:
           RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
-        run: cargo build --manifest-path rust/Cargo.toml --release --bin ccusage --features fetch-litellm-pricing
+          TARGET: ${{ matrix.target }}
+        run: cargo build --manifest-path rust/Cargo.toml --release --bin ccusage --features fetch-litellm-pricing --target "$TARGET"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: matrix.engine == 'cargo-mac'
         with:
-          name: ccusage-osx-x64
-          path: rust/target/release/ccusage
+          name: ccusage-${{ matrix.rid }}
+          path: rust/target/${{ matrix.target }}/release/ccusage
           if-no-files-found: error
 
+      # On the osx-arm64 leg this is a Native AOT cross-arch publish from the
+      # Intel runner.
       - uses: ./.github/actions/publish-mcp-server
+        id: server
         if: matrix.server != false
         with:
           rid: ${{ matrix.rid }}
+
+      # Nothing in the gating path runs the osx-arm64 binaries on arm64 (the
+      # arm64 jobs in ci.yaml are non-blocking), so this check is what stops a
+      # wrong-arch engine or server from shipping: a failure here fails
+      # `build`, so `bundle` and a release never see the artifacts.
+      - name: Verify Mach-O architecture
+        if: matrix.engine == 'cargo-mac'
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.macho }}
+          ENGINE: rust/target/${{ matrix.target }}/release/ccusage
+          SERVER_DIR: ${{ steps.server.outputs.directory }}
+        run: |
+          for binary in "$ENGINE" "$SERVER_DIR/ccusage-mcp"; do
+            if ! archs="$(lipo -archs "$binary" 2>&1)"; then
+              echo "::error::$binary is not a Mach-O binary: $archs"
+              exit 1
+            fi
+            echo "$binary: $archs"
+            if [ "$archs" != "$EXPECTED" ]; then
+              echo "::error::$binary is built for '$archs', expected '$EXPECTED'"
+              exit 1
+            fi
+          done
 
   bundle:
     needs: build

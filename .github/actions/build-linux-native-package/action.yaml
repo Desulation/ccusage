@@ -80,9 +80,9 @@ runs:
 
     # An explicit step rather than cache-nix-action's post-job save, which never
     # runs when nested in this composite action (see setup-nix-cache's
-    # defer-save). Unlike macOS, this action roots only the Crane layers and not
-    # the flake inputs, so the limit stays at 4G instead of 0 to keep the
-    # fetched flake inputs warm.
+    # defer-save). This action roots only the Crane layers and not the flake
+    # inputs, so the limit stays at 4G instead of 0 to keep the fetched flake
+    # inputs warm.
     - name: Save Nix store
       if: steps.nix.outputs.save == 'true'
       uses: nix-community/cache-nix-action/save@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2

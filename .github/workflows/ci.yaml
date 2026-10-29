@@ -180,7 +180,8 @@ jobs:
 
   # Unit, runner, drift and schema-snapshot tests of the C# server (spec §9.2).
   # The e2e tests report inconclusive here; the `e2e` job runs them against the
-  # built artifacts.
+  # built artifacts. The suite is platform-independent; its macOS leg runs in
+  # the non-blocking `dotnet-test-macos-arm64` job below.
   dotnet-test:
     name: dotnet test (${{ matrix.os }})
     needs: [changes, tirith-scan]
@@ -192,14 +193,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     # dotnet/global.json selects the SDK and the Microsoft.Testing.Platform
     # runner; the SDK only finds it when run from dotnet/.
-    defaults:
+    defaults: &dotnet-test-defaults
       run:
         shell: bash
         working-directory: dotnet
-    steps:
+    steps: &dotnet-test-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -212,6 +213,27 @@ jobs:
       - name: Test
         run: dotnet test --project Ccusage.Mcp.slnx -c Release --no-build
 
+  # The jobs named "(non-blocking)" run the gating jobs' steps (YAML aliases,
+  # so they cannot drift) on Apple-silicon macos-latest runners and stay out
+  # of `ci-gate`'s needs: those runners are often unavailable for hours, and a
+  # job that never gets one ends abandoned, which continue-on-error does not
+  # cover (spec §9.1, §16 item 8). A failure here is still an osx-arm64
+  # regression to fix; the gate relies on the Mach-O check in
+  # build-artifacts.yaml instead.
+  dotnet-test-macos-arm64:
+    name: dotnet test (${{ matrix.os }}, non-blocking)
+    needs: [changes, tirith-scan]
+    if: needs.changes.outputs.code-changed == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os: [macos-latest]
+    defaults: *dotnet-test-defaults
+    steps: *dotnet-test-steps
+
   # The six-RID engine and server matrix plus the bundle (spec §9.1).
   build-artifacts:
     needs: [changes, tirith-scan]
@@ -223,7 +245,8 @@ jobs:
       ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
   # The published server and the real engine against the fixtures through the
-  # MCP client (spec §10.3).
+  # MCP client (spec §10.3). osx-arm64 runs in the non-blocking
+  # `e2e-osx-arm64` job below.
   e2e:
     name: e2e (${{ matrix.rid }})
     needs: build-artifacts
@@ -241,10 +264,7 @@ jobs:
           - os: windows-latest
             rid: win-x64
             exe: .exe
-          - os: macos-latest
-            rid: osx-arm64
-            exe: ''
-    steps:
+    steps: &e2e-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -274,11 +294,29 @@ jobs:
           CCUSAGE_ENGINE: ${{ runner.temp }}/bin/ccusage${{ matrix.exe }}
         run: dotnet test --project Ccusage.Mcp.slnx -c Release
 
+  # The only run of the cross-built osx-arm64 server and engine on arm64; see
+  # `dotnet-test-macos-arm64` for why it is non-blocking.
+  e2e-osx-arm64:
+    name: e2e (${{ matrix.rid }}, non-blocking)
+    needs: build-artifacts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            rid: osx-arm64
+            exe: ''
+    steps: *e2e-steps
+
   # Extracts ccusage.mcpb, starts it through the manifest command for this OS
   # and calls initialize, tools/list, list-sources and daily. The Linux and
-  # macOS legs assert the exec bits after extraction (spec §15 Q4); the
-  # windows-11-arm leg asserts the win-x64 server selects the arm64 engine
-  # (spec §15 Q5).
+  # macOS legs assert the exec bits after extraction (spec §15 Q4; the gating
+  # macOS leg is macos-15-intel); the windows-11-arm leg asserts the win-x64
+  # server selects the arm64 engine (spec §15 Q5). macos-latest runs in the
+  # non-blocking `bundle-smoke-macos-arm64` job below.
   bundle-smoke:
     name: bundle smoke (${{ matrix.os }})
     needs: build-artifacts
@@ -294,15 +332,13 @@ jobs:
             expect: linux/x64/ccusage
           - os: ubuntu-24.04-arm
             expect: linux/arm64/ccusage
-          - os: macos-latest
-            expect: osx/arm64/ccusage
           - os: macos-15-intel
             expect: osx/x64/ccusage
           - os: windows-latest
             expect: 'win\x64\ccusage.exe'
           - os: windows-11-arm
             expect: 'win\arm64\ccusage.exe'
-    steps:
+    steps: &bundle-smoke-steps
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -316,6 +352,21 @@ jobs:
         env:
           EXPECT_ENGINE_PATH: ${{ matrix.expect }}
         run: ./dotnet/packaging/bundle-smoke.ps1 -Bundle "$env:RUNNER_TEMP/assets/ccusage.mcpb" -FixturesDir dotnet/tests/fixtures -ExpectEnginePath $env:EXPECT_ENGINE_PATH
+
+  # See `dotnet-test-macos-arm64` for why it is non-blocking.
+  bundle-smoke-macos-arm64:
+    name: bundle smoke (${{ matrix.os }}, non-blocking)
+    needs: build-artifacts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            expect: osx/arm64/ccusage
+    steps: *bundle-smoke-steps
 
   # Validates the plugin and the marketplace with Claude Code's own strict
   # validator, installed with its native installer at a pinned version.
@@ -423,7 +474,8 @@ jobs:
   # individually would leave those pull requests blocked on checks that never
   # report. Only `success` and `skipped` pass; every other result fails the
   # gate, including a job GitHub abandoned because no runner picked it up
-  # (otherwise its skipped dependents would leave the gate green).
+  # (otherwise its skipped dependents would leave the gate green). The
+  # "(non-blocking)" macos-latest jobs are deliberately not listed.
   ci-gate:
     name: ci gate
     needs:
