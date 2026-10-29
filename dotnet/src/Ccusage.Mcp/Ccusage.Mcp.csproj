@@ -18,4 +18,10 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
+  <!-- The command catalog is derived from the upstream engine's CLI metadata, embedded by link (never copied). -->
+  <ItemGroup>
+    <EmbeddedResource Include="../../../rust/crates/ccusage-cli-parser/src/cli-commands.json" LogicalName="cli-commands.json" />
+    <EmbeddedResource Include="../../../rust/crates/ccusage-cli-parser/src/cli-help.json" LogicalName="cli-help.json" />
+  </ItemGroup>
+
 </Project>
