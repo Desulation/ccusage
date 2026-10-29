@@ -35,7 +35,7 @@ public static class CommandValidator
 
         if (!catalog.TryGetPage(source, report, out var page))
         {
-            throw new ValidationException($"Report '{report}' is not available for source '{source}'. Sources with '{report}': {Join(catalog.SourcesWithReport(report))}.");
+            throw PairUnavailable(catalog, source, report);
         }
 
         var given = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -79,6 +79,10 @@ public static class CommandValidator
 
         return argv.AsReadOnly();
     }
+
+    /// <summary>The error for a (source, report) pair the catalog has no page for; shared with <see cref="CliArgsParser"/>.</summary>
+    internal static ValidationException PairUnavailable(CommandCatalog catalog, string source, string report) =>
+        new($"Report '{report}' is not available for source '{source}'. Sources with '{report}': {Join(catalog.SourcesWithReport(report))}.");
 
     private static void AppendOption(List<string> argv, OptionSpec spec, string raw)
     {
