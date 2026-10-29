@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ccusage.Mcp/Ccusage.Mcp.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ccusage.Mcp.Tests/Ccusage.Mcp.Tests.csproj" />
+    <Project Path="tests/FakeEngine/FakeEngine.csproj" />
+  </Folder>
+</Solution>
