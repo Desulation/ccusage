@@ -135,6 +135,8 @@ in
           ".github/tagpr-template.md"
           "nix/tools/*/bun.lock"
           "nix/tools/*/bun.nix"
+          # Compared byte-for-byte against System.Text.Json's 2-space WriteIndented output.
+          "dotnet/tests/Ccusage.Mcp.Tests/Snapshots/*.json"
         ];
 
         settings.formatter = {
