@@ -88,8 +88,8 @@ work lives in new paths (`dotnet/`, `plugin/`, `.claude-plugin/`, new workflows)
 | `.github/actions/setup-nix-cache` | drop Blacksmith sticky-disk usage |
 | `.tagpr` | `versionFile` per §8 |
 | `AGENTS.md`, `apps/ccusage/AGENTS.md` references, `.agents/skills/{development,testing,docs}` | describe the C# layer instead of the npm layer |
-| `docs/guide/{installation,getting-started}.md` + new `docs/guide/mcp.md` | plugin / `.mcpb` / MCP setup; tools, prompt, and `/ccusage` skill reference |
-| `README.md` (symlink target moves with `apps/ccusage` removal) | becomes a real root `README.md`; install section rewritten |
+| `docs/guide/**` + new `docs/guide/mcp.md` | per §3.4 |
+| `README.md` (symlink into `apps/ccusage/`) | becomes a real root `README.md`, rewritten per §3.4 |
 | `LICENSE` (symlink to `apps/ccusage/LICENSE`) | becomes a real root `LICENSE` file, content unchanged (MIT) |
 
 `rust/` is **not** modified.
@@ -118,6 +118,60 @@ plugin/
 .agents/skills/dotnet/SKILL.md       how to work in dotnet/
 .github/workflows/sync-upstream.yaml (§9.4)
 ```
+
+### 3.4 README and docs content
+
+The root `README.md` replaces the `apps/ccusage/README.md` symlink. Its content:
+
+**Remove**
+
+- npm badges (Socket, npm version, npm downloads).
+- Upstream's promotional content: Major Sponsors, GitHub Sponsors, Star History, and the
+  DeepWiki, Trendshift, and Awesome badges (they would present upstream's sponsors and
+  stats as this fork's).
+- Every `npx` / `bunx` / `pnpm dlx` / `pnpx` example, pkg.pr.new preview builds, and the bunx
+  caching note.
+- `nix run github:ccusage/ccusage` (runs upstream, not this fork).
+- Development notes that no longer apply: `pnpm install` for workspace `node_modules`, the
+  scheduled "update pricing" workflow paragraph.
+
+**Rewrite**
+
+- **Intro:** what the fork is — ccusage reports for MCP clients through a .NET Native AOT
+  server, with the Rust engine unchanged — and a credit line: "Fork of
+  [ccusage/ccusage](https://github.com/ccusage/ccusage) by @ryoppippi".
+- **Quick Start:** `/plugin marketplace add Desulation/ccusage` →
+  `/plugin install ccusage@ccusage` → `/ccusage claude daily`.
+- **Installation:** (1) Claude Code plugin (recommended); (2) Claude Desktop via
+  `ccusage.mcpb` from Releases; (3) other MCP clients via a per-platform archive plus a
+  `.mcp.json` snippet; (4) the standalone `ccusage` CLI from the same archive, with the macOS
+  `xattr` note for browser downloads.
+- **Usage:** slash commands (`/ccusage …`); example questions that trigger the tools; the
+  existing CLI examples with `bunx ccusage` changed to `ccusage`.
+- **MCP reference:** summary table of tools, the `ccusage` prompt, and the `/ccusage` skill,
+  linking to `docs/guide/mcp.md`.
+- **Development:** keep the Nix/direnv/`just` setup; add a `dotnet/` section (.NET 10 SDK,
+  build, test, AOT publish); mention `sync-upstream.yaml`.
+
+**Keep:** Supported Sources table, Features list (add an MCP line), License
+(MIT © @ryoppippi). The Documentation link changes from upstream's `ccusage.com` to this
+repo's `docs/guide/` (the fork's docs site is built in CI but not deployed; hosting, e.g.
+GitHub Pages, is out of scope).
+
+**Docs site (`docs/`):**
+
+- Every `npx ccusage@latest …` / `bunx ccusage …` across `docs/guide/**` becomes
+  `ccusage …`.
+- `installation.md` and `getting-started.md` are rewritten to match the README's
+  Installation and Quick Start.
+- New `docs/guide/mcp.md`: full tool, prompt, and skill reference (§5, §7.2), engine
+  location (§6.1), and troubleshooting (engine not found, timeouts, large outputs).
+- Sponsor and promotional content — `docs/guide/sponsors.md`, the sponsor block on
+  `docs/index.md`, and the Sponsor/Sponsors nav entries and `/sponsor` redirect in
+  `docs/.vitepress/config.ts` — gets the same treatment as the README: removed, keeping the
+  upstream credit.
+- `docs/wrangler.jsonc` (upstream's Cloudflare deployment of ccusage.com) is left in place
+  but unused, per §2.
 
 ## 4. C# server architecture
 
