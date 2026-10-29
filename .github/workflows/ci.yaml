@@ -218,7 +218,6 @@ jobs:
     if: needs.changes.outputs.code-changed == 'true'
     permissions:
       contents: read
-      actions: write
     uses: ./.github/workflows/build-artifacts.yaml
     with:
       ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -422,7 +421,9 @@ jobs:
   # Single check for main's branch ruleset to require. Most jobs above are gated
   # on `changes` and are skipped on docs-only pull requests, so requiring them
   # individually would leave those pull requests blocked on checks that never
-  # report. A skipped job is fine here; only real failures fail the gate.
+  # report. Only `success` and `skipped` pass; every other result fails the
+  # gate, including a job GitHub abandoned because no runner picked it up
+  # (otherwise its skipped dependents would leave the gate green).
   ci-gate:
     name: ci gate
     needs:
@@ -441,13 +442,18 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-slim
     steps:
-      - name: Report job results
+      # A missing result (null) also fails, so the check fails closed.
+      - name: Fail unless every job succeeded or was skipped
+        shell: bash
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: echo "$RESULTS"
-      - name: Fail when a job failed or was cancelled
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
-        run: exit 1
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          bad="$(jq -r '[to_entries[] | select(.value.result != "success" and .value.result != "skipped") | "\(.key) (\(.value.result))"] | join(", ")' <<< "$NEEDS")"
+          if [ -n "$bad" ]; then
+            echo "::error::not successful: $bad"
+            exit 1
+          fi
 
   # Dispatch runs aren't attached to the release PR; report via commit status.
   release-dispatch-status-pending:

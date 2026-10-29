@@ -69,17 +69,22 @@ jobs:
           fi
           git push --force origin upstream/main:refs/heads/sync/upstream
       # Commit subjects are upstream-controlled text, so the body goes through a
-      # file and never through a shell string. --repo is explicit because gh
-      # would otherwise resolve the `upstream` remote ahead of `origin`.
+      # file and never through a shell string, and every subject line is
+      # indented into a Markdown code block: there "fixes #N" closes no fork
+      # issue, #N and @user neither link nor ping, and no subject can render as
+      # Markdown. Indenting every line (rather than a ``` fence) leaves a subject
+      # nothing to close the block with. --repo is explicit because gh would
+      # otherwise resolve the `upstream` remote ahead of `origin`.
       - name: Open or update the pull request
         if: steps.check.outputs.up_to_date != 'true'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
             printf '%s\n\n' 'Merge this PR with a merge commit (never squash or rebase); otherwise upstream history is lost and every week looks new.'
             printf 'Incoming commits from ccusage/ccusage main:\n\n'
-            git log --oneline --no-decorate origin/main..upstream/main
+            git log --oneline --no-decorate origin/main..upstream/main | sed 's/^/    /'
           } > "$RUNNER_TEMP/body.md"
           n=$(gh pr list --repo "$GITHUB_REPOSITORY" --head sync/upstream --base main --state open --json number -q '.[0].number')
           if [ -n "$n" ]; then

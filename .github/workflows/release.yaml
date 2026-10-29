@@ -72,19 +72,19 @@ jobs:
     if: needs.tagpr.outputs.tag != ''
     permissions:
       contents: read
-      actions: write
     uses: ./.github/workflows/build-artifacts.yaml
     with:
       ref: ${{ needs.tagpr.outputs.tag }}
 
   # Publishes ccusage.mcpb, the six ccusage-mcp-<rid> archives and SHA256SUMS
   # (spec §9.3). --verify-tag refuses to create a tag, so the release attaches
-  # to the one tagpr pushed.
+  # to the one tagpr pushed. The explicit result check publishes only after a
+  # fully successful build, whatever result a build job that never ran reports.
   release:
     needs:
       - tagpr
       - build-artifacts
-    if: needs.tagpr.outputs.tag != ''
+    if: needs.tagpr.outputs.tag != '' && needs.build-artifacts.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
