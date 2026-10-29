@@ -376,16 +376,17 @@ emulation, use `IsWow64Process2` through a source-generated `[LibraryImport]` (A
 		{
 			"name": "ccusage",
 			"source": "./plugin",
-			"description": "Coding-agent CLI token usage and cost reports over MCP",
-			"mcpServers": "https://github.com/Desulation/ccusage/releases/download/v<version>/ccusage.mcpb"
+			"description": "Coding-agent CLI token usage and cost reports over MCP"
 		}
 	]
 }
 ```
 
 `plugin/.claude-plugin/plugin.json` carries `name: "ccusage"`, `version`, `description`,
-`author`, `repository`, `license: "MIT"`. Exact marketplace field placement (entry vs
-manifest for `mcpServers`) is settled in Phase 0 against `claude plugin validate`.
+`author`, `repository`, `license: "MIT"` and
+`"mcpServers": "https://github.com/Desulation/ccusage/releases/download/v<version>/ccusage.mcpb"`.
+The manifest is the only placement Claude Code loads at runtime; an `mcpServers` field on the
+marketplace entry passes `claude plugin validate` but is ignored (§16 item 9).
 
 Install: `/plugin marketplace add Desulation/ccusage`, then `/plugin install ccusage@ccusage`.
 
@@ -457,10 +458,9 @@ Expected size: ~30–50 MB compressed (measured in Phase 0).
 - Canonical version: root `package.json` `version` (unchanged upstream wiring: Nix
   `package.nix`, `rust/crates/ccusage/build.rs`, and the `main.rs` version test keep
   reading it).
-- tagpr `versionFile`: `package.json`, `docs/package.json`, `plugin/.claude-plugin/plugin.json`,
-  `.claude-plugin/marketplace.json` (the version inside the bundle URL),
-  `dotnet/Directory.Build.props`.
-- CI job `version-consistency` fails if those five disagree.
+- tagpr `versionFile`: `package.json`, `docs/package.json`, `plugin/.claude-plugin/plugin.json`
+  (its `version` and the version inside the bundle URL), `dotnet/Directory.Build.props`.
+- CI job `version-consistency` fails if those five values disagree.
 - The `.mcpb` manifest version is stamped at bundle time from `package.json`.
 
 ## 9. CI/CD
@@ -733,3 +733,13 @@ form (`ccusage blocks`, `ccusage statusline`); `plugin-validate` pins Claude Cod
    fetched at build time instead of the flake-pinned snapshot and lacks the Nix link flags (it
    may be slightly larger); and both macOS legs depend on `macos-15-intel`, the last Intel
    macOS image GitHub offers, so its retirement will force a revisit.
+9. **`mcpServers` moves to `plugin.json` (§7.1, §8), 2026-10-29.** After installing v20.0.46
+   from the marketplace, a fresh session loaded the plugin's skill but never started its
+   server: the debug log has no `plugin:ccusage:ccusage` entry, so Claude Code ignores
+   `mcpServers` on a marketplace entry (§15 row 7 had only validated that placement). The same
+   plugin with the release URL in `plugin.json`, loaded with `--plugin-dir`, downloaded the
+   36,279,575-byte bundle, extracted 13 files, started the server and answered `list-sources`
+   (server and engine 20.0.46, `win/x64/ccusage.exe`). That run also settles §15 row 3 for an
+   `https://` bundle: the download and extraction finish before the server starts. The entry
+   field is removed, `marketplace.json` leaves tagpr's `versionFile`, and `version-consistency`
+   reads the bundle URL from `plugin.json`.
