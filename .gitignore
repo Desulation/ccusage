@@ -54,3 +54,6 @@ dotnet/**/bin/
 dotnet/**/obj/
 dotnet/dist/
 *.mcpb
+
+# plugin (--plugin-dir extracts the bundle here)
+plugin/.mcpb-cache/
