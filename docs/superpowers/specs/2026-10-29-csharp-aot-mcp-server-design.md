@@ -470,18 +470,27 @@ pinned by commit SHA.
 
 ### 9.1 Build matrix (shared by CI and release)
 
-| RID         | Runner             | Engine build                 | Server build                                                                                                     |
-| ----------- | ------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| linux-x64   | `ubuntu-latest`    | `nix build .#ccusage-static` | `dotnet publish -r linux-x64`                                                                                    |
-| linux-arm64 | `ubuntu-24.04-arm` | `nix build .#ccusage-static` | `dotnet publish -r linux-arm64`                                                                                  |
-| osx-arm64   | `macos-latest`     | native Nix build             | `dotnet publish -r osx-arm64`                                                                                    |
-| osx-x64     | `macos-15-intel`   | `cargo build --release`      | `dotnet publish -r osx-x64`                                                                                      |
-| win-x64     | `windows-latest`   | `cargo build --release`      | `dotnet publish -r win-x64`                                                                                      |
-| win-arm64   | `windows-11-arm`   | `cargo build --release`      | not built (bundle ships win-x64 server); the per-platform archive pairs the win-x64 server with the arm64 engine |
+| RID         | Runner             | Engine build                                                  | Server build                                                                                                     |
+| ----------- | ------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| linux-x64   | `ubuntu-latest`    | `nix build .#ccusage-static`                                  | `dotnet publish -r linux-x64`                                                                                    |
+| linux-arm64 | `ubuntu-24.04-arm` | `nix build .#ccusage-static`                                  | `dotnet publish -r linux-arm64`                                                                                  |
+| osx-arm64   | `macos-15-intel`   | `cargo build --release --target aarch64-apple-darwin` (cross) | `dotnet publish -r osx-arm64` (Native AOT cross-arch)                                                            |
+| osx-x64     | `macos-15-intel`   | `cargo build --release --target x86_64-apple-darwin`          | `dotnet publish -r osx-x64`                                                                                      |
+| win-x64     | `windows-latest`   | `cargo build --release`                                       | `dotnet publish -r win-x64`                                                                                      |
+| win-arm64   | `windows-11-arm`   | `cargo build --release`                                       | not built (bundle ships win-x64 server); the per-platform archive pairs the win-x64 server with the arm64 engine |
 
-The existing `build-*-native-package` composite actions are reworked to build and upload
-the engine binary without npm staging. Each matrix job uploads `ccusage-mcp-<rid>` and
+The Linux and Windows `build-*-native-package` composite actions are reworked to build and
+upload the engine binary without npm staging; the macOS legs build inline with cargo, and the
+macOS Nix action is removed (§16 item 8). Each matrix job uploads `ccusage-mcp-<rid>` and
 `ccusage-<rid>` artifacts.
+
+Both macOS legs run on the Intel `macos-15-intel` runner, because `macos-latest` (Apple
+silicon) runners were too scarce to gate on (§16 item 8). osx-arm64 is cross-compiled: cargo
+builds for `aarch64-apple-darwin` and the Native AOT publish targets `osx-arm64` from the x64
+host. Since nothing in the gating path runs those binaries on arm64, the build job asserts with
+`lipo -archs` that the engine and the published server are `arm64` Mach-O binaries (`x86_64`
+on osx-x64) and fails otherwise, so `bundle` and a release never receive the wrong
+architecture.
 
 ### 9.2 `ci.yaml`
 
@@ -490,8 +499,8 @@ the engine binary without npm staging. Each matrix job uploads `ccusage-mcp-<rid
 - **Removed:** JS tests, npm dry-run / pkg.pr.new, npm-launcher e2e, PR performance comment,
   Babashka harness test.
 - **Added:**
-  - `dotnet-test` on ubuntu/windows/macos: build, MSTest (unit, runner, drift, schema
-    snapshot).
+  - `dotnet-test` on ubuntu/windows (macos non-blocking, below): build, MSTest (unit, runner,
+    drift, schema snapshot).
   - `build` matrix (§9.1).
   - `e2e` per OS: run the published server and real engine against fixtures through the MCP
     client (§10.3).
@@ -501,6 +510,13 @@ the engine binary without npm staging. Each matrix job uploads `ccusage-mcp-<rid
   - `plugin-validate`: install Claude Code with its native installer (pinned version) and run
     `claude plugin validate --strict` on `plugin/` and the marketplace.
   - `version-consistency` (§8).
+- **Non-blocking Apple-silicon legs (§16 item 8):** the `macos-latest` legs of `dotnet-test`,
+  `e2e` (osx-arm64) and `bundle-smoke` run as separate jobs named `(non-blocking)` that reuse
+  the gating jobs' steps and are not in `ci gate`'s needs: a job that never gets a runner ends
+  abandoned, which `continue-on-error` does not cover. They are the only place the cross-built
+  osx-arm64 binaries run on arm64. The `macos-15-intel` `bundle-smoke` leg stays gating and
+  covers the macOS exec bits (§15 row 4); `dotnet-test` has no gating macOS leg, as the unit
+  suite is platform-independent.
 - Triggers: existing ones plus `workflow_dispatch` (used for sync PRs, §9.4).
 
 ### 9.3 `release.yaml`
@@ -704,3 +720,12 @@ form (`ccusage blocks`, `ccusage statusline`); `plugin-validate` pins Claude Cod
 7. **`list-sources` `engine-error` (§5.4).** `list-sources` adds an `engine-error` string field
    when the engine cannot be located or queried; it is omitted when null. This is additive to
    the §5.4 shape.
+8. **osx-arm64 cross-built on Intel (§9.1, §9.2), 2026-10-29.** Across four CI runs the
+   `build osx-arm64` job on `macos-latest` never acquired a runner, which blocked `bundle`,
+   `e2e`, `bundle-smoke` and `ci gate`, and `release.yaml` reuses the same chain. The user
+   chose to always cross-build osx-arm64 on `macos-15-intel` (cargo
+   `--target aarch64-apple-darwin`, Native AOT `-r osx-arm64`) with a `lipo -archs` check of
+   both binaries, and to keep the `macos-latest` legs only as non-blocking jobs outside
+   `ci gate`. `.github/actions/build-macos-nix-native-package` is deleted with its matrix leg,
+   superseding the note above that kept the macOS action's cross-build branch; `nix/` and the
+   darwin flake outputs stay, and `nix flake check` still evaluates them.

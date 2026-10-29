@@ -8,7 +8,9 @@ description: Diagnoses and fixes failing GitHub Actions checks with gh. Use when
 1. Read the check state with `gh pr checks`, then pull the failing job logs with
    `gh run view <run-id> --log-failed`. Logs fetched through `gh` are reproducible;
    browser-only inspection is not. Pending checks can usually wait unless the failure is
-   already clear.
+   already clear. The `(non-blocking)` macos-latest jobs sit outside `ci gate` and can queue
+   for hours without a runner; do not wait on them, but treat a real failure there as an
+   osx-arm64 regression.
 
 2. Reproduce locally. CI runs almost everything through Nix, so the failing step maps onto a
    `just` recipe:
