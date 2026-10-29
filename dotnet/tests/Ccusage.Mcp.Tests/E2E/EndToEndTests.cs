@@ -126,6 +126,9 @@ public sealed class EndToEndTests : IDisposable
         await using var c = await Client();
         var p = await c.GetPromptAsync("ccusage", new Dictionary<string, object?> { ["args"] = "claude daily --offline" }, cancellationToken: Ct);
         var direct = await Direct(["claude", "daily", "--json", "--offline"]);
+        // Contains("") is always true, so a failed or silent engine run must not reach the Contains.
+        Assert.AreEqual(0, direct.ExitCode, direct.Stderr);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(direct.Stdout));
         StringAssert.Contains(((TextContentBlock)p.Messages.Single().Content).Text, direct.Stdout);
     }
 
