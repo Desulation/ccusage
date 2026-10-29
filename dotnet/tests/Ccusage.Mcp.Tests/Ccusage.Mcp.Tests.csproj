@@ -16,6 +16,7 @@
   <ItemGroup>
     <AssemblyMetadata Include="FakeEnginePath" Value="$(MSBuildThisFileDirectory)../FakeEngine/bin/$(Configuration)/net10.0/ccusage$(FakeEngineExe)" />
     <AssemblyMetadata Include="SnapshotsSourceDir" Value="$(MSBuildThisFileDirectory)Snapshots" />
+    <AssemblyMetadata Include="FixturesDir" Value="$(MSBuildThisFileDirectory)../fixtures" />
   </ItemGroup>
 
   <ItemGroup>

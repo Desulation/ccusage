@@ -70,6 +70,32 @@ equals `statusline`; otherwise `stdin` is `""`.
 - `CCUSAGE_ENGINE` - path to the real `ccusage` engine for the e2e tests.
 - `UPDATE_SNAPSHOTS=1` - rewrite snapshot files instead of comparing against them.
 
+## End-to-end tests
+
+`tests/Ccusage.Mcp.Tests/E2E/EndToEndTests.cs` starts the published server over stdio with the MCP
+SDK client and asserts each result's text equals running the engine directly with the same argv
+(spec §10.3). Without both `CCUSAGE_MCP_E2E_SERVER` and `CCUSAGE_ENGINE` every e2e test reports
+inconclusive (`Set CCUSAGE_MCP_E2E_SERVER and CCUSAGE_ENGINE to run e2e tests.`), so the default
+suite stays green without the engine. Both the server and the direct engine runs get
+`CLAUDE_CONFIG_DIR=tests/fixtures/claude`, `CODEX_HOME=tests/fixtures/codex`, a fresh temp
+`HOME`/`USERPROFILE`, `NO_COLOR=1`, `LOG_LEVEL=0` and `CCUSAGE_ENGINE` through the child process
+environment; the test process environment is never changed.
+
+Setup (Windows, from the repository root):
+
+```sh
+cargo build --manifest-path rust/Cargo.toml --release --bin ccusage --features fetch-litellm-pricing
+# Publish through the dotnet MCP tool: mcp__dotnet__dotnet_project Publish,
+# project dotnet/src/Ccusage.Mcp, runtime win-x64, configuration Release (never shell dotnet publish).
+cd dotnet
+CCUSAGE_MCP_E2E_SERVER=$(pwd)/src/Ccusage.Mcp/bin/Release/net10.0/win-x64/publish/ccusage-mcp.exe \
+CCUSAGE_ENGINE=$(pwd)/../rust/target/release/ccusage.exe \
+dotnet test --project Ccusage.Mcp.slnx
+```
+
+The MCP `Test` action cannot set environment variables, so this run uses the shell. Observed on
+the fixtures: `daily(all) bytes: 3770` (the length of `ccusage daily --json --offline`).
+
 ## AOT rules
 
 - `PublishAot`, `IsAotCompatible` and `IlcTreatWarningsAsErrors` are on: zero IL trim/AOT warnings.
