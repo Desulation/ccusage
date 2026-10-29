@@ -1,6 +1,6 @@
 {
 	"name": "ccusage",
-	"version": "20.0.45",
+	"version": "20.0.46",
 	"description": "Coding-agent CLI token usage and cost reports over MCP",
 	"author": { "name": "Desulation" },
 	"repository": "https://github.com/Desulation/ccusage",
