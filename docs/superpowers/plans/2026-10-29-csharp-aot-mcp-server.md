@@ -155,8 +155,16 @@ Expected: one placement passes both commands with no warnings; record the passin
 
 - [ ] **Step 10: Install and probe in a scratch Claude Code session (Q1, Q2, Q3)** [local, Windows]
 
-In an empty directory run `claude --debug`, then `/plugin marketplace add C:\Users\gman2\source\AiTesting\ccusage-csharp\phase0\marketplace`, `/plugin install ccusage@ccusage`, `/mcp`, and ask it to call the `ping` tool.
-Expected observations recorded in §15: **Q1** = the `ccusage-mcp.exe` process is running (check `Get-CimInstance Win32_Process -Filter "Name='ccusage-mcp.exe'" | Select CommandLine`), i.e. `platform_overrides.win32` was honored rather than `/bin/sh launch.sh`; **Q2** = that command line shows the extracted bundle path in place of `${__dirname}`; **Q3** = whether the debug log shows a failed connection before extraction completed and whether `/mcp` needed a reconnect. Quote the relevant log lines.
+**Never modify the human's Claude Code configuration:** do not run `/plugin marketplace add`, `/plugin install`, `claude plugin marketplace add` or `claude plugin install` against the real config. Load the spike for one session only with `--plugin-dir`, which installs nothing.
+
+Copy `phase0/ccusage.mcpb` into a session-only plugin folder `phase0/plugin-local/` whose `.claude-plugin/plugin.json` is the step 8 manifest plus `"mcpServers": "./ccusage.mcpb"`. From an empty scratch directory run (headless, one session, debug log to a file):
+
+```powershell
+claude -p --debug --plugin-dir C:\Users\gman2\source\AiTesting\ccusage-csharp\phase0\plugin-local --allowedTools "mcp__plugin_ccusage_ccusage__ping" "Call the ping tool from the ccusage MCP server once and print its exact result." 2> C:\Users\gman2\source\AiTesting\ccusage-csharp\phase0\claude-debug.log
+```
+
+While it runs, capture the server process: `Get-CimInstance Win32_Process -Filter "Name='ccusage-mcp.exe'" | Select CommandLine`.
+Expected observations recorded in §15: **Q1** = `ccusage-mcp.exe` ran (so `platform_overrides.win32` was honored rather than `/bin/sh launch.sh`) and the ping result came back; **Q2** = its command line shows the extracted bundle path in place of `${__dirname}`; quote the relevant `claude-debug.log` lines. **Q3** (download timing for an `https://` bundle URL) cannot be observed with a local bundle: record it as "unverified locally — checked on the first release", with the step 18 fallback (document the one-time `/mcp` reconnect) applied preemptively in the skill's error path.
 
 - [ ] **Step 11: Record Q4 as pending CI**
 
