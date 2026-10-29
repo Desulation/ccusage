@@ -1,8 +1,11 @@
 name: Build Linux native package
-description: Build, stage, archive, and upload a Linux ccusage native package
+description: Build and upload the Linux ccusage engine binary
 inputs:
   arch:
     description: Native package architecture
+    required: true
+  rid:
+    description: .NET runtime identifier naming the uploaded `ccusage-<rid>` artifact
     required: true
   binary:
     description: Path to the built ccusage binary
@@ -38,9 +41,9 @@ runs:
           nix build .#ccusage-static --print-build-logs
         fi
 
-    # The link lives inside the store's own gcroots, so it persists with a
-    # sticky disk or a cache-nix-action entry and protects these artifacts
-    # (and, through keep-outputs, their toolchain) from the next trim until a
+    # The link lives inside the store's own gcroots, so it persists with the
+    # cache-nix-action entry and protects these artifacts (and, through
+    # keep-outputs, their toolchain) from the next garbage collection until a
     # later run replaces it.
     - name: Root current Crane artifacts for cache save
       if: inputs.save-nix-cache == 'true'
@@ -65,21 +68,14 @@ runs:
           grep -Eiq 'not a dynamic executable|statically linked' "$RUNNER_TEMP/ldd.txt"
         fi
 
-    - name: Stage native package
+    - name: Stage engine binary
       shell: bash
       env:
-        ARCH: ${{ inputs.arch }}
         BINARY: ${{ inputs.binary }}
-      run: apps/ccusage/scripts/stage-native-package.nu --platform linux --arch "$ARCH" --binary "$BINARY"
-
-    - name: Archive native package binary
-      shell: bash
-      env:
-        ARCH: ${{ inputs.arch }}
-      run: tar -cf "ccusage-native-linux-$ARCH.tar" "packages/ccusage-linux-$ARCH/bin"
+      run: mkdir -p "$RUNNER_TEMP/engine" && cp "$BINARY" "$RUNNER_TEMP/engine/ccusage"
 
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: ccusage-native-linux-${{ inputs.arch }}
-        path: ccusage-native-linux-${{ inputs.arch }}.tar
+        name: ccusage-${{ inputs.rid }}
+        path: ${{ runner.temp }}/engine/ccusage
         if-no-files-found: error

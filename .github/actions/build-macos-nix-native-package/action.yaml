@@ -1,8 +1,11 @@
 name: Build macOS Nix native package
-description: Build, stage, archive, and upload a macOS ccusage native package with Nix
+description: Build and upload the macOS ccusage engine binary with Nix
 inputs:
   arch:
     description: Native package architecture
+    required: true
+  rid:
+    description: .NET runtime identifier naming the uploaded `ccusage-<rid>` artifact
     required: true
   binary:
     description: Path to the built ccusage binary
@@ -84,23 +87,16 @@ runs:
             done
         echo "Rooted $(find "$roots/flake-inputs" -type l | wc -l | tr -d ' ') flake inputs"
 
-    - name: Stage native package
+    - name: Stage engine binary
       shell: bash
       env:
-        ARCH: ${{ inputs.arch }}
         BINARY: ${{ inputs.binary }}
-      run: apps/ccusage/scripts/stage-native-package.nu --platform darwin --arch "$ARCH" --binary "$BINARY"
-
-    - name: Archive native package binary
-      shell: bash
-      env:
-        ARCH: ${{ inputs.arch }}
-      run: tar -cf "ccusage-native-darwin-$ARCH.tar" "packages/ccusage-darwin-$ARCH/bin"
+      run: mkdir -p "$RUNNER_TEMP/engine" && cp "$BINARY" "$RUNNER_TEMP/engine/ccusage"
 
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: ccusage-native-darwin-${{ inputs.arch }}
-        path: ccusage-native-darwin-${{ inputs.arch }}.tar
+        name: ccusage-${{ inputs.rid }}
+        path: ${{ runner.temp }}/engine/ccusage
         if-no-files-found: error
 
     # An explicit step rather than cache-nix-action's post-job save, which never

@@ -1,11 +1,7 @@
 name: Setup Nix with a persistent store
 description: >
-  Install Nix with a store that persists across runs. On Blacksmith Linux
-  runners /nix is a sticky disk: a block device cloned from the last committed
-  snapshot, so the whole store is there at mount time without a restore or save
-  step and without counting against the Actions cache quota. Runners without
-  sticky disks (macOS, GitHub-hosted) fall back to cache-nix-action, which
-  restores and saves the store through the Actions cache.
+  Install Nix with a store that persists across runs through cache-nix-action,
+  which restores and saves the store through the Actions cache.
 inputs:
   cache-scope:
     description: >
@@ -16,15 +12,15 @@ inputs:
     default: ''
   disk-job:
     description: >
-      Job id whose sticky disk to mount instead of this job's own. Lets a job
-      that never commits (e.g. one that only runs on pull requests) start from
-      the store another job with the same closure keeps warm.
+      Unused; kept so existing callers that pass it stay valid. The cache key
+      is scoped by github.job and cache-scope only.
     default: ''
   save:
     description: >
-      Whether this job may persist the store for later runs. Sticky disks only
-      commit from runs on main that are not pull_request(_target) events, so
-      pull request code can never write a store that main and releases read.
+      Whether this job may persist the store for later runs. Actions cache
+      entries saved from a pull request are scoped to that pull request's ref,
+      so pull request code can never write a store that main and releases
+      read; the `save` output additionally requires a push to main.
     default: 'true'
   gc-max-store-size-linux:
     description: >
@@ -39,11 +35,10 @@ inputs:
       action needs this: the post-job save of a nested cache-nix-action step
       read `save` as empty and silently skipped every save. It also lets the
       caller root what the next run needs before the save collects garbage.
-      Has no effect on sticky disks.
     default: 'false'
 outputs:
   primary-key:
-    description: cache-nix-action key for this run's store; empty on sticky disks.
+    description: cache-nix-action key for this run's store.
     value: ${{ steps.key.outputs.primary }}
   save:
     description: >
@@ -60,29 +55,11 @@ runs:
         SAVE: ${{ inputs.save }}
         TRUSTED_REF: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' }}
       run: |
-        # stickydisk reads the same variable to find the Blacksmith agent.
-        if [ "$RUNNER_OS" = Linux ] && [ -n "${BLACKSMITH_STICKY_DISK_GRPC_PORT:-}" ]; then
-          echo "sticky=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "sticky=false" >> "$GITHUB_OUTPUT"
-        fi
         if [ "$SAVE" = true ] && [ "$TRUSTED_REF" = true ]; then
           echo "commit=true" >> "$GITHUB_OUTPUT"
         else
           echo "commit=false" >> "$GITHUB_OUTPUT"
         fi
-
-    # The key has no workflow name, so release.yaml's build-native-packages
-    # mounts the disk ci.yaml keeps warm on every push to main. It is mounted
-    # before Nix is installed; nix-quick-install-action keeps an existing
-    # writable /nix and only adds its own paths to the database.
-    - name: Mount Nix store sticky disk
-      if: steps.backend.outputs.sticky == 'true'
-      uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
-      with:
-        key: ${{ github.repository }}-nix-${{ runner.arch }}-${{ inputs.disk-job || github.job }}-${{ inputs.cache-scope }}
-        path: /nix
-        commit: ${{ steps.backend.outputs.commit }}
 
     - name: Install Nix
       uses: nixbuild/nix-quick-install-action@9f63be77f412a248c9d9a65a4c82cf066cdf8f0c # v35
@@ -113,17 +90,17 @@ runs:
     # forever. The restore prefixes (without the sha) then restore the newest
     # prior entry to warm the deps: the first prefers the current deps hash, the
     # second drops it so a flake change that only adds developer tooling still
-    # restores a warm store. Blacksmith handles stale cache eviction without the
-    # GitHub REST API used by cache-nix-action's purge mode.
+    # restores a warm store. Stale entries age out through the Actions cache's
+    # own eviction rather than cache-nix-action's purge mode, which needs the
+    # GitHub REST API.
     #
-    # Like the sticky disk key, the key has no workflow name, so release.yaml's
-    # macOS builds, which never save, restore the entry ci.yaml saved for the
-    # previous main commit: release starts before CI saves for the release
-    # commit, which only bumps package.json files outside the deps hash. Two
-    # workflows sharing a job id can only collide on the primary key for the
-    # same commit, whose stores hold the same build.
+    # The key has no workflow name, so release.yaml's builds, which never save,
+    # restore the entry ci.yaml saved for the previous main commit: release
+    # starts before CI saves for the release commit, which only bumps
+    # package.json files outside the deps hash. Two workflows sharing a job id
+    # can only collide on the primary key for the same commit, whose stores hold
+    # the same build.
     - name: Compute Nix cache key
-      if: steps.backend.outputs.sticky != 'true'
       id: key
       shell: bash
       env:
@@ -140,7 +117,7 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     - name: Cache Nix store
-      if: steps.backend.outputs.sticky != 'true' && inputs.defer-save != 'true'
+      if: inputs.defer-save != 'true'
       uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
       with:
         primary-key: ${{ steps.key.outputs.primary }}
@@ -149,7 +126,7 @@ runs:
         gc-max-store-size-linux: ${{ inputs.gc-max-store-size-linux }}
 
     - name: Restore Nix store
-      if: steps.backend.outputs.sticky != 'true' && inputs.defer-save == 'true'
+      if: inputs.defer-save == 'true'
       uses: nix-community/cache-nix-action/restore@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
       with:
         primary-key: ${{ steps.key.outputs.primary }}
@@ -164,22 +141,3 @@ runs:
             sudo chown -R "$USER:$(id -gn)" "$path"
           fi
         done
-
-    # A committed disk keeps everything every earlier run added, so trim it
-    # once it passes half its capacity. Only committing runs trim: elsewhere the
-    # changes are discarded and every later run would pay for the same GC.
-    # Persistent roots under /nix/var/nix/gcroots (see build-linux-native-package)
-    # and the current profile generations survive; out-links from earlier runs
-    # pointed into their own workspaces and no longer count.
-    - name: Trim Nix store sticky disk
-      if: steps.backend.outputs.sticky == 'true'
-      shell: bash
-      env:
-        COMMIT: ${{ steps.backend.outputs.commit }}
-      run: |
-        df -h /nix
-        read -r size used < <(df -B1 --output=size,used /nix | tail -n1)
-        if [ "$COMMIT" = true ] && [ "$used" -gt $((size / 2)) ]; then
-          nix-collect-garbage --delete-old
-          df -h /nix
-        fi

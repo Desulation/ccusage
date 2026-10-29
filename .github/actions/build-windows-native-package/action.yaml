@@ -1,8 +1,11 @@
 name: Build Windows native package
-description: Build, stage, archive, and upload a Windows ccusage native package
+description: Build and upload the Windows ccusage engine binary
 inputs:
   arch:
     description: Native package architecture
+    required: true
+  rid:
+    description: .NET runtime identifier naming the uploaded `ccusage-<rid>` artifact
     required: true
   binary:
     description: Path to the built ccusage binary
@@ -56,25 +59,16 @@ runs:
       # LiteLLM pricing snapshot instead of reading it from the pinned input.
       run: cargo build --manifest-path rust/Cargo.toml --release --bin ccusage --features fetch-litellm-pricing
 
-    - name: Stage native package
+    - name: Stage engine binary
       shell: bash
       env:
-        ARCH: ${{ inputs.arch }}
         BINARY: ${{ inputs.binary }}
-      run: |
-        mkdir -p "packages/ccusage-win32-$ARCH/bin"
-        cp "$BINARY" "packages/ccusage-win32-$ARCH/bin/ccusage.exe"
-
-    - name: Archive native package binary
-      shell: bash
-      env:
-        ARCH: ${{ inputs.arch }}
-      run: tar -cf "ccusage-native-win32-$ARCH.tar" "packages/ccusage-win32-$ARCH/bin"
+      run: mkdir -p "$RUNNER_TEMP/engine" && cp "$BINARY" "$RUNNER_TEMP/engine/ccusage.exe"
 
     - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: ccusage-native-win32-${{ inputs.arch }}
-        path: ccusage-native-win32-${{ inputs.arch }}.tar
+        name: ccusage-${{ inputs.rid }}
+        path: ${{ runner.temp }}/engine/ccusage.exe
         if-no-files-found: error
 
     # Workspace crates rebuild on every run (see the restore step), so their
