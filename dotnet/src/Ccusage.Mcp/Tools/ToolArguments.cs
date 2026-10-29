@@ -7,7 +7,8 @@ namespace Ccusage.Mcp.Tools;
 /// <summary>
 /// Turns MCP tool-call arguments into a <see cref="CommandRequest"/>. The SDK does not check arguments against a
 /// hand-built tool's input schema, so every value is converted by its actual JSON kind and
-/// <see cref="CommandValidator"/> has the final word (unknown parameters included).
+/// <see cref="CommandValidator"/> has the final word (unknown parameters included), except for <c>report</c> and
+/// <c>list-sources</c>, whose extra keys <see cref="RejectExtraKeys"/> rejects.
 /// </summary>
 public static class ToolArguments
 {

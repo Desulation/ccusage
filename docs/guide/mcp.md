@@ -287,7 +287,7 @@ The bare `/ccusage` works unless another command already uses that name; `/ccusa
 - **Engine error:** a tool error with the exit code and the engine's stderr (`ccusage exited with code …`), the timeout for a run that took too long (`ccusage timed out after … s.`), or, when no engine was found, every location checked (see [Engine location](#engine-location)).
 - **Cancellation:** cancelling the MCP request stops the engine and its child processes.
 
-`list-sources` always succeeds. Its result is JSON:
+`list-sources` takes no parameters (passing one is a validation error) and otherwise always succeeds, even when the engine cannot be found. Its result is JSON:
 
 ```json
 {
