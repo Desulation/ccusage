@@ -18,54 +18,16 @@ catalogs:
     vitepress-plugin-llms:
       specifier: ^1.14.0
       version: 1.14.0
-  types:
-    '@types/node':
-      specifier: ^24.19.2
-      version: 24.19.2
-    '@types/react':
-      specifier: ^19.3.0
-      version: 19.3.0
 
 importers:
 
   .: {}
-
-  apps/ccusage:
-    devDependencies:
-      '@types/node':
-        specifier: catalog:types
-        version: 24.19.2
-    optionalDependencies:
-      '@ccusage/ccusage-darwin-arm64':
-        specifier: workspace:*
-        version: link:../../packages/ccusage-darwin-arm64
-      '@ccusage/ccusage-darwin-x64':
-        specifier: workspace:*
-        version: link:../../packages/ccusage-darwin-x64
-      '@ccusage/ccusage-linux-arm64':
-        specifier: workspace:*
-        version: link:../../packages/ccusage-linux-arm64
-      '@ccusage/ccusage-linux-x64':
-        specifier: workspace:*
-        version: link:../../packages/ccusage-linux-x64
-      '@ccusage/ccusage-win32-arm64':
-        specifier: workspace:*
-        version: link:../../packages/ccusage-win32-arm64
-      '@ccusage/ccusage-win32-x64':
-        specifier: workspace:*
-        version: link:../../packages/ccusage-win32-x64
 
   docs:
     devDependencies:
       '@ryoppippi/vite-plugin-cloudflare-redirect':
         specifier: catalog:docs
         version: 1.1.3(vite@8.3.4(@types/node@24.19.2))
-      '@types/node':
-        specifier: catalog:types
-        version: 24.19.2
-      '@types/react':
-        specifier: catalog:types
-        version: 19.3.0
       vitepress:
         specifier: catalog:docs
         version: 2.0.0-alpha.21(@types/node@24.19.2)(postcss@8.5.29)
@@ -75,18 +37,6 @@ importers:
       vitepress-plugin-llms:
         specifier: catalog:docs
         version: 1.14.0
-
-  packages/ccusage-darwin-arm64: {}
-
-  packages/ccusage-darwin-x64: {}
-
-  packages/ccusage-linux-arm64: {}
-
-  packages/ccusage-linux-x64: {}
-
-  packages/ccusage-win32-arm64: {}
-
-  packages/ccusage-win32-x64: {}
 
 packages:
 
@@ -306,9 +256,6 @@ packages:
 
   '@types/node@24.19.2':
     resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
-
-  '@types/react@19.3.0':
-    resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
 
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
@@ -1218,10 +1165,7 @@ snapshots:
   '@types/node@24.19.2':
     dependencies:
       undici-types: 7.24.6
-
-  '@types/react@19.3.0':
-    dependencies:
-      csstype: 3.2.3
+    optional: true
 
   '@types/unist@3.0.3': {}
 
@@ -1903,7 +1847,8 @@ snapshots:
 
   uc.micro@2.1.0: {}
 
-  undici-types@7.24.6: {}
+  undici-types@7.24.6:
+    optional: true
 
   unified@11.0.5:
     dependencies:
