@@ -48,10 +48,14 @@ exits 0. Control args (each is also echoed in `argv`):
 - `--fake-stdout=<text>` - write `text` instead of the echo.
 - `--fake-stdout-bytes=<n>` - write `n` bytes of `x` instead of the echo.
 - `--fake-hang` - sleep forever after writing stdout.
+- `--fake-child` - start a silent, hanging copy of itself that inherits the standard handles (it
+  holds the stdout pipe open, so only a process-tree kill ends the run).
+- `--fake-pid-file=<path>` - before writing stdout, atomically write `<pid>` (plus `\n<child pid>`
+  with `--fake-child`) to `path`, so tests can assert the process tree was killed.
 - `--version` - print `ccusage 0.0.0-fake`.
 
-Stdin is read to end only when it is redirected and an argument equals `statusline`; otherwise
-`stdin` is `""`.
+Stdin is read to end (as UTF-8, like the real engine) only when it is redirected and an argument
+equals `statusline`; otherwise `stdin` is `""`.
 
 ## Test environment variables
 

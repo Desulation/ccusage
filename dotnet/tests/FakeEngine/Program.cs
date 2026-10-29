@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,8 +13,10 @@ namespace FakeEngine;
 //   --fake-stdout=<text>     replaces the echo
 //   --fake-stdout-bytes=<n>  n bytes of 'x' replace the echo
 //   --fake-hang              sleep forever after writing stdout
+//   --fake-child             start a silent, hanging copy of itself that inherits stdin/stdout/stderr
+//   --fake-pid-file=<path>   atomically write "<pid>" (plus "\n<child pid>" with --fake-child) before stdout
 //   --version                prints "ccusage 0.0.0-fake"
-// Stdin is read to end only when it is redirected and an arg equals "statusline".
+// Stdin is read to end (as UTF-8, like the real engine) only when it is redirected and an arg equals "statusline".
 static class Program
 {
     static int Main(string[] args)
@@ -27,6 +31,8 @@ static class Program
         string? stderr = null;
         string? stdoutOverride = null;
         var hang = false;
+        var child = false;
+        string? pidFile = null;
 
         foreach (var arg in args)
         {
@@ -50,11 +56,36 @@ static class Program
             {
                 hang = true;
             }
+            else if (arg == "--fake-child")
+            {
+                child = true;
+            }
+            else if (TryValue(arg, "--fake-pid-file=", out var path))
+            {
+                pidFile = path;
+            }
         }
 
         var stdin = Console.IsInputRedirected && args.Contains("statusline")
-            ? Console.In.ReadToEnd()
+            ? new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false)).ReadToEnd()
             : "";
+
+        var pids = new List<int> { Environment.ProcessId };
+        if (child)
+        {
+            // No redirection: the child inherits this process's standard handles, so it holds the stdout pipe open.
+            using var started = Process.Start(new ProcessStartInfo(Environment.ProcessPath!, ["--fake-stdout=", "--fake-hang"])
+            {
+                UseShellExecute = false,
+            }) ?? throw new InvalidOperationException("Failed to start the fake child.");
+            pids.Add(started.Id);
+        }
+
+        if (pidFile is not null)
+        {
+            File.WriteAllText(pidFile + ".tmp", string.Join('\n', pids));
+            File.Move(pidFile + ".tmp", pidFile);
+        }
 
         if (stderr is not null)
         {
