@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ccusage-mcp</AssemblyName>
+    <RootNamespace>Ccusage.Mcp</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <IlcTreatWarningsAsErrors>true</IlcTreatWarningsAsErrors>
+    <StripSymbols>true</StripSymbols>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <!-- The command catalog is derived from the upstream engine's CLI metadata, embedded by link (never copied). -->
+  <ItemGroup>
+    <EmbeddedResource Include="../../../rust/crates/ccusage-cli-parser/src/cli-commands.json" LogicalName="cli-commands.json" />
+    <EmbeddedResource Include="../../../rust/crates/ccusage-cli-parser/src/cli-help.json" LogicalName="cli-help.json" />
+  </ItemGroup>
+
+</Project>

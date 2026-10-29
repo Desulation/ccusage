@@ -5,41 +5,25 @@ Welcome to ccusage! This guide will help you get up and running with analyzing y
 ## Prerequisites
 
 - At least one supported coding CLI installed and used
-- Bun 1.3+ recommended for direct execution
+- Claude Code or another MCP client, or the standalone `ccusage` CLI from a release archive (see [Installation](/guide/installation))
 
 ## Quick Start
 
-The fastest way to try ccusage is to run it directly without installation:
+In Claude Code, add the marketplace, install the plugin, and run your first report:
 
-::: code-group
-
-```bash [bunx (Recommended)]
-bunx ccusage
+```text
+/plugin marketplace add Desulation/ccusage
+/plugin install ccusage@ccusage
+/ccusage claude daily
 ```
 
-```bash [Nix]
-nix run github:ccusage/ccusage -- daily
+`/ccusage` with no arguments shows your daily usage for all detected supported coding CLIs. You can also ask Claude directly, for example "How much did I spend on Codex this month?". See [MCP Server](/guide/mcp) for every tool and parameter.
+
+With the standalone CLI, run:
+
+```bash
+ccusage
 ```
-
-```bash [npx]
-npx ccusage@latest
-```
-
-```bash [pnpm]
-pnpm dlx ccusage
-```
-
-```bash [pkg.pr.new preview]
-bunx -p https://pkg.pr.new/ccusage@<pr-number-or-commit-sha> ccusage --offline
-```
-
-:::
-
-This will show your daily usage report for all detected supported coding CLIs by default.
-
-::: tip Runtime
-[bunx](https://bun.com/docs/pm/bunx) caches the downloaded package, so repeated runs are faster after the first launch.
-:::
 
 Use a data source namespace when you want the same report focused on one source:
 
@@ -228,5 +212,6 @@ export ZCODE_HOME="/path/to/zcode,/archive/zcode"
 ## Getting Help
 
 - Use `ccusage --help` for command options
-- Visit our [GitHub repository](https://github.com/ccusage/ccusage) for issues
+- In Claude Code, ask Claude instead of typing `/ccusage --help` (`--help` is not available through the MCP server): questions such as "Which sources and reports can ccusage show?" go through the `list-sources` tool, which also reports the engine version and path
+- Visit the [GitHub repository](https://github.com/Desulation/ccusage) for issues
 - Use [JSON Output](/guide/json-output) for programmatic usage

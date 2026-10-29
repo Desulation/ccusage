@@ -8,7 +8,6 @@ target/
 result
 result-*
 *.tgz
-packages/ccusage-*/bin/
 
 # code coverage
 coverage
@@ -48,3 +47,12 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # generated local agent skills
 .claude/skills
+
+# dotnet
+dotnet/**/bin/
+dotnet/**/obj/
+dotnet/dist/
+*.mcpb
+
+# plugin (--plugin-dir extracts the bundle here)
+plugin/.mcpb-cache/

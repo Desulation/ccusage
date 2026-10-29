@@ -6,12 +6,10 @@
 #
 # pnpm policy: repo-global tools and pinned package tools provided by the Nix
 # dev shell are called directly; package-scoped tools that are not in Nix still
-# go through pnpm. `build` is delegated with `pnpm run` because npm prepack
-# invokes that script by name.
+# go through pnpm.
 #
 # Run `just --list` (or `just <module>::--list`) to see everything.
 
-mod ccusage 'apps/ccusage'
 mod docs
 mod rust
 
@@ -37,7 +35,7 @@ install:
     touch node_modules/.install-stamp
 
 # Build every workspace package
-build: ccusage::build docs::build
+build: docs::build
 
 # Type-check and lint TypeScript with oxlint's type-aware checker
 typecheck:
@@ -49,11 +47,7 @@ test: rust::test test-node
 
 # Run Node's built-in test runner for TypeScript package and tooling tests
 test-node:
-    TZ=UTC node --test apps/ccusage/src/cli.test.ts nix/tools/models-dev-gen/compact.test.ts
-
-# Generate a large benchmark fixture for PR performance comparisons
-generate-large-fixture output_dir codex_output_dir size_mib="1024":
-    apps/ccusage/scripts/generate-large-fixture.ts --output-dir "{{output_dir}}" --codex-output-dir "{{codex_output_dir}}" --size-mib {{size_mib}}
+    TZ=UTC node --test nix/tools/models-dev-gen/compact.test.ts
 
 # Format the whole tree (Nix, Rust, JS/TS, workflows, typos) via treefmt
 fmt:
@@ -67,7 +61,7 @@ check:
 hawk:
     cargo hawk check --manifest-path rust/Cargo.toml
 
-# Regenerate apps/ccusage/config-schema.json from the Rust source
+# Regenerate config-schema.json from the Rust source
 schema:
     nix run .#generate-schema
 

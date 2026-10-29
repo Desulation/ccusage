@@ -10,7 +10,7 @@ paths: '**/*.rs'
 
 `similarity-rs` comes from the Nix dev shell (`similarity` in
 `nix/dev-shell.nix`); prefix it with `direnv exec .` from outside the shell.
-TypeScript duplication belongs to the `typescript` and `ast-grep` skills.
+TypeScript duplication belongs to the `ast-grep` skill.
 
 Run it over `$ARGUMENTS`, or over `.` when none was given. Functions and type
 definitions are separate passes, so a default run silently misses parallel

@@ -34,7 +34,7 @@ label like "Use for tests" leaves the agent unable to route. Frontmatter is alwa
 it near Anthropic's ~100-word budget.
 
 Optional routing fields: `paths` for Claude-style file matching (comma-separated globs or a YAML
-list) and `globs` as a cross-runtime compatibility hint — see `.agents/skills/typescript/SKILL.md`.
+list) and `globs` as a cross-runtime compatibility hint — see `.agents/skills/nushell/SKILL.md`.
 Codex-style discovery reads the `description`, so the triggers belong there too.
 
 ## Body

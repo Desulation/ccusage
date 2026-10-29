@@ -1,0 +1,20 @@
+{
+	"manifest_version": "0.3",
+	"name": "ccusage",
+	"version": "__VERSION__",
+	"description": "Coding-agent CLI token usage and cost reports",
+	"author": { "name": "Desulation" },
+	"license": "MIT",
+	"server": {
+		"type": "binary",
+		"entry_point": "launch.sh",
+		"mcp_config": {
+			"command": "/bin/sh",
+			"args": ["${__dirname}/launch.sh"],
+			"platform_overrides": {
+				"win32": { "command": "${__dirname}/win/ccusage-mcp.exe", "args": [] }
+			}
+		}
+	},
+	"compatibility": { "platforms": ["darwin", "linux", "win32"] }
+}

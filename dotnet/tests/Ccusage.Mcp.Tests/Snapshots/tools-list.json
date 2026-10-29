@@ -1,0 +1,724 @@
+{
+  "tools": [
+    {
+      "name": "daily",
+      "description": "Token usage and cost grouped by day. Default source: all detected sources. Long ranges produce large JSON; prefer since/until or last.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "all",
+              "claude",
+              "codex",
+              "opencode",
+              "amp",
+              "droid",
+              "codebuff",
+              "hermes",
+              "pi",
+              "goose",
+              "kilo",
+              "copilot",
+              "gemini",
+              "antigravity",
+              "kimi",
+              "qwen",
+              "openclaw",
+              "grok",
+              "zcode"
+            ],
+            "default": "all",
+            "description": "Data source. Default: all."
+          },
+          "since": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter from date (YYYY-MM-DD or YYYYMMDD)"
+          },
+          "until": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter until date (inclusive)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone for date grouping (IANA)"
+          },
+          "sections": {
+            "type": "string",
+            "description": "Emit multiple unified report sections from one load (daily, weekly, monthly, session) Comma-separated; each item one of: daily, weekly, monthly, session. Applies to: all."
+          },
+          "by-agent": {
+            "type": "boolean",
+            "description": "Include per-agent JSON breakdowns in unified report rows Default: false. Applies to: all."
+          },
+          "offline": {
+            "type": "boolean",
+            "description": "Use cached pricing data where supported Default: false."
+          },
+          "no-cost": {
+            "type": "boolean",
+            "description": "Hide cost information in table and JSON output Default: false. Applies to: all, codex, opencode, amp, droid, codebuff, hermes, pi, goose, kilo, copilot, gemini, antigravity, kimi, qwen, openclaw, grok, zcode."
+          },
+          "config": {
+            "type": "string",
+            "description": "Path to configuration file Default: auto-discovery."
+          },
+          "last": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Show only the most recent N periods of the report (1 is today, this week, or this month)"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "calculate",
+              "display"
+            ],
+            "description": "Cost calculation mode Default: auto. Applies to: claude."
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Show pricing mismatch information for debugging Default: false. Applies to: claude."
+          },
+          "debug-samples": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of sample discrepancies to show in debug output Default: 5. Applies to: claude."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "desc",
+              "asc"
+            ],
+            "description": "Sort order Default: asc. Applies to: claude."
+          },
+          "breakdown": {
+            "type": "boolean",
+            "description": "Show per-model cost breakdown Default: false. Applies to: claude."
+          },
+          "single-thread": {
+            "type": "boolean",
+            "description": "Disable parallel JSONL file loading Default: false. Applies to: claude."
+          },
+          "instances": {
+            "type": "boolean",
+            "description": "Show usage breakdown by project/instance Default: false. Applies to: claude."
+          },
+          "project": {
+            "type": "string",
+            "description": "Filter to specific project name Applies to: claude."
+          },
+          "project-aliases": {
+            "type": "string",
+            "description": "Comma-separated project aliases (e.g., \u0027ccusage=Usage Tracker,myproject=My Project\u0027) Applies to: claude."
+          },
+          "speed": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "standard",
+              "flex",
+              "fast"
+            ],
+            "description": "Cost speed tier: auto uses recorded settings, then Codex config.toml; use standard, flex, or fast to override Default: auto. Applies to: codex."
+          },
+          "pi-path": {
+            "type": "string",
+            "description": "Path or comma-separated paths to pi-agent sessions directories Applies to: pi."
+          },
+          "open-claw-path": {
+            "type": "string",
+            "description": "Path or comma-separated paths to OpenClaw data directories (default: ~/.openclaw, ~/.clawdbot, ~/.moltbot, ~/.moldbot) Applies to: openclaw."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "weekly",
+      "description": "Token usage and cost grouped by week. Default source: all detected sources. Long ranges produce large JSON; prefer since/until or last.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "all",
+              "claude",
+              "opencode"
+            ],
+            "default": "all",
+            "description": "Data source. Default: all."
+          },
+          "since": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter from date (YYYY-MM-DD or YYYYMMDD)"
+          },
+          "until": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter until date (inclusive)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone for date grouping (IANA)"
+          },
+          "sections": {
+            "type": "string",
+            "description": "Emit multiple unified report sections from one load (daily, weekly, monthly, session) Comma-separated; each item one of: daily, weekly, monthly, session. Applies to: all."
+          },
+          "by-agent": {
+            "type": "boolean",
+            "description": "Include per-agent JSON breakdowns in unified report rows Default: false. Applies to: all."
+          },
+          "offline": {
+            "type": "boolean",
+            "description": "Use cached pricing data where supported Default: false."
+          },
+          "no-cost": {
+            "type": "boolean",
+            "description": "Hide cost information in table and JSON output Default: false. Applies to: all, opencode."
+          },
+          "config": {
+            "type": "string",
+            "description": "Path to configuration file Default: auto-discovery."
+          },
+          "start-of-week": {
+            "type": "string",
+            "enum": [
+              "sunday",
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday"
+            ],
+            "description": "Start day of the week Default: monday. Applies to: all, claude."
+          },
+          "last": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Show only the most recent N periods of the report (1 is today, this week, or this month)"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "calculate",
+              "display"
+            ],
+            "description": "Cost calculation mode Default: auto. Applies to: claude."
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Show pricing mismatch information for debugging Default: false. Applies to: claude."
+          },
+          "debug-samples": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of sample discrepancies to show in debug output Default: 5. Applies to: claude."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "desc",
+              "asc"
+            ],
+            "description": "Sort order Default: asc. Applies to: claude."
+          },
+          "breakdown": {
+            "type": "boolean",
+            "description": "Show per-model cost breakdown Default: false. Applies to: claude."
+          },
+          "single-thread": {
+            "type": "boolean",
+            "description": "Disable parallel JSONL file loading Default: false. Applies to: claude."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "monthly",
+      "description": "Token usage and cost grouped by month. Default source: all detected sources. Long ranges produce large JSON; prefer since/until or last.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "all",
+              "claude",
+              "codex",
+              "opencode",
+              "amp",
+              "droid",
+              "codebuff",
+              "hermes",
+              "pi",
+              "goose",
+              "kilo",
+              "copilot",
+              "gemini",
+              "antigravity",
+              "kimi",
+              "qwen",
+              "openclaw",
+              "grok",
+              "zcode"
+            ],
+            "default": "all",
+            "description": "Data source. Default: all."
+          },
+          "since": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter from date (YYYY-MM-DD or YYYYMMDD)"
+          },
+          "until": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter until date (inclusive)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone for date grouping (IANA)"
+          },
+          "sections": {
+            "type": "string",
+            "description": "Emit multiple unified report sections from one load (daily, weekly, monthly, session) Comma-separated; each item one of: daily, weekly, monthly, session. Applies to: all."
+          },
+          "by-agent": {
+            "type": "boolean",
+            "description": "Include per-agent JSON breakdowns in unified report rows Default: false. Applies to: all."
+          },
+          "offline": {
+            "type": "boolean",
+            "description": "Use cached pricing data where supported Default: false."
+          },
+          "no-cost": {
+            "type": "boolean",
+            "description": "Hide cost information in table and JSON output Default: false. Applies to: all, codex, opencode, amp, droid, codebuff, hermes, pi, goose, kilo, copilot, gemini, antigravity, kimi, qwen, openclaw, grok, zcode."
+          },
+          "config": {
+            "type": "string",
+            "description": "Path to configuration file Default: auto-discovery."
+          },
+          "last": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Show only the most recent N periods of the report (1 is today, this week, or this month)"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "calculate",
+              "display"
+            ],
+            "description": "Cost calculation mode Default: auto. Applies to: claude."
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Show pricing mismatch information for debugging Default: false. Applies to: claude."
+          },
+          "debug-samples": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of sample discrepancies to show in debug output Default: 5. Applies to: claude."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "desc",
+              "asc"
+            ],
+            "description": "Sort order Default: asc. Applies to: claude."
+          },
+          "breakdown": {
+            "type": "boolean",
+            "description": "Show per-model cost breakdown Default: false. Applies to: claude."
+          },
+          "single-thread": {
+            "type": "boolean",
+            "description": "Disable parallel JSONL file loading Default: false. Applies to: claude."
+          },
+          "speed": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "standard",
+              "flex",
+              "fast"
+            ],
+            "description": "Cost speed tier: auto uses recorded settings, then Codex config.toml; use standard, flex, or fast to override Default: auto. Applies to: codex."
+          },
+          "pi-path": {
+            "type": "string",
+            "description": "Path or comma-separated paths to pi-agent sessions directories Applies to: pi."
+          },
+          "open-claw-path": {
+            "type": "string",
+            "description": "Path or comma-separated paths to OpenClaw data directories (default: ~/.openclaw, ~/.clawdbot, ~/.moltbot, ~/.moldbot) Applies to: openclaw."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "session",
+      "description": "Token usage and cost grouped by session. Default source: all detected sources. Long ranges produce large JSON; prefer since/until or last.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "all",
+              "claude",
+              "codex",
+              "opencode",
+              "amp",
+              "droid",
+              "codebuff",
+              "hermes",
+              "pi",
+              "goose",
+              "kilo",
+              "copilot",
+              "gemini",
+              "antigravity",
+              "kimi",
+              "qwen",
+              "openclaw",
+              "grok",
+              "zcode"
+            ],
+            "default": "all",
+            "description": "Data source. Default: all."
+          },
+          "since": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter from date (YYYY-MM-DD or YYYYMMDD)"
+          },
+          "until": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter until date (inclusive)"
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone for date grouping (IANA)"
+          },
+          "sections": {
+            "type": "string",
+            "description": "Emit multiple unified report sections from one load (daily, weekly, monthly, session) Comma-separated; each item one of: daily, weekly, monthly, session. Applies to: all."
+          },
+          "by-agent": {
+            "type": "boolean",
+            "description": "Include per-agent JSON breakdowns in unified report rows Default: false. Applies to: all."
+          },
+          "offline": {
+            "type": "boolean",
+            "description": "Use cached pricing data where supported Default: false."
+          },
+          "no-cost": {
+            "type": "boolean",
+            "description": "Hide cost information in table and JSON output Default: false. Applies to: all, codex, opencode, amp, droid, codebuff, hermes, pi, goose, kilo, copilot, gemini, antigravity, kimi, qwen, openclaw, grok, zcode."
+          },
+          "config": {
+            "type": "string",
+            "description": "Path to configuration file Default: auto-discovery."
+          },
+          "id": {
+            "type": "string",
+            "description": "Filter to specific session ID Applies to: all, claude, codex."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "calculate",
+              "display"
+            ],
+            "description": "Cost calculation mode Default: auto. Applies to: claude."
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Show pricing mismatch information for debugging Default: false. Applies to: claude."
+          },
+          "debug-samples": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of sample discrepancies to show in debug output Default: 5. Applies to: claude."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "desc",
+              "asc"
+            ],
+            "description": "Sort order Default: asc. Applies to: claude."
+          },
+          "breakdown": {
+            "type": "boolean",
+            "description": "Show per-model cost breakdown Default: false. Applies to: claude."
+          },
+          "single-thread": {
+            "type": "boolean",
+            "description": "Disable parallel JSONL file loading Default: false. Applies to: claude."
+          },
+          "speed": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "standard",
+              "flex",
+              "fast"
+            ],
+            "description": "Cost speed tier: auto uses recorded settings, then Codex config.toml; use standard, flex, or fast to override Default: auto. Applies to: codex."
+          },
+          "pi-path": {
+            "type": "string",
+            "description": "Path or comma-separated paths to pi-agent sessions directories Applies to: pi."
+          },
+          "open-claw-path": {
+            "type": "string",
+            "description": "Path or comma-separated paths to OpenClaw data directories (default: ~/.openclaw, ~/.clawdbot, ~/.moltbot, ~/.moldbot) Applies to: openclaw."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "blocks",
+      "description": "Claude Code usage grouped by 5-hour billing blocks (Claude only).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "since": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter from date (YYYYMMDD format)"
+          },
+          "until": {
+            "type": "string",
+            "pattern": "^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$",
+            "description": "Filter until date (YYYYMMDD format)"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "calculate",
+              "display"
+            ],
+            "description": "Cost calculation mode Default: auto."
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Show pricing mismatch information for debugging Default: false."
+          },
+          "debug-samples": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of sample discrepancies to show in debug output Default: 5."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "desc",
+              "asc"
+            ],
+            "description": "Sort order Default: asc."
+          },
+          "breakdown": {
+            "type": "boolean",
+            "description": "Show per-model cost breakdown Default: false."
+          },
+          "offline": {
+            "type": "boolean",
+            "description": "Use cached pricing data for Claude models instead of fetching from API Default: false."
+          },
+          "single-thread": {
+            "type": "boolean",
+            "description": "Disable parallel JSONL file loading Default: false."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone for date grouping (e.g., UTC, America/New_York, Asia/Tokyo) Default: system timezone."
+          },
+          "config": {
+            "type": "string",
+            "description": "Path to configuration file Default: auto-discovery."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Show only active block with projections Default: false."
+          },
+          "recent": {
+            "type": "boolean",
+            "description": "Show blocks from last 3 days (including active) Default: false."
+          },
+          "token-limit": {
+            "type": "string",
+            "pattern": "^([1-9]\\d*|max)$",
+            "description": "Token limit for quota warnings (e.g., 500000 or \u0022max\u0022)"
+          },
+          "session-length": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Session block duration in hours Default: 5."
+          }
+        },
+        "additionalProperties": false
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "statusline",
+      "description": "Claude Code status line text for a hook payload (Claude only; returns plain text).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "hook-input": {
+            "type": "object",
+            "description": "Claude Code status-line hook payload (session_id, transcript_path, cwd, model, workspace, version, cost, context_window). Written to the engine\u0027s stdin unchanged."
+          },
+          "offline": {
+            "type": "boolean",
+            "description": "Use cached pricing data for Claude models instead of fetching from API Default: true."
+          },
+          "visual-burn-rate": {
+            "type": "string",
+            "enum": [
+              "off",
+              "emoji",
+              "text",
+              "emoji-text"
+            ],
+            "description": "Controls the visualization of the burn rate status Default: off."
+          },
+          "cost-source": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "ccusage",
+              "cc",
+              "both"
+            ],
+            "description": "Session cost source Default: auto."
+          },
+          "cache": {
+            "type": "boolean",
+            "description": "Enable cache for status line output Default: true."
+          },
+          "refresh-interval": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Refresh interval in seconds for cache expiry Default: 1."
+          },
+          "context-low-threshold": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Context usage percentage below which status is shown in green (0-100) Default: 50."
+          },
+          "context-medium-threshold": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Context usage percentage below which status is shown in yellow (0-100) Default: 80."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Timezone for date grouping (IANA)"
+          },
+          "config": {
+            "type": "string",
+            "description": "Path to configuration file Default: auto-discovery."
+          },
+          "debug": {
+            "type": "boolean",
+            "description": "Show pricing mismatch information for debugging Default: false."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "hook-input"
+        ]
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "list-sources",
+      "description": "List supported sources, their reports, and the server/engine versions and engine path (engine-error when the engine cannot be located or queried).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    },
+    {
+      "name": "report",
+      "description": "Run any ccusage report from CLI-style arguments; same validation as the typed tools.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "args": {
+            "type": "string",
+            "description": "CLI-style arguments as typed after \u0060ccusage\u0060, e.g. \u0022codex daily --since 2026-10-01\u0022, \u0022weekly --last 2 --by-agent\u0022, \u0022\u0022 (= daily, all sources)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "args"
+        ]
+      },
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "readOnlyHint": true
+      }
+    }
+  ]
+}

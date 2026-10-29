@@ -1,0 +1,15 @@
+{
+  "prompts": [
+    {
+      "name": "ccusage",
+      "description": "Run a ccusage report and present it as a readable table.",
+      "arguments": [
+        {
+          "name": "args",
+          "description": "CLI-style arguments as typed after \u0060ccusage\u0060, e.g. \u0022codex daily --since 2026-10-01\u0022, \u0022weekly --last 2 --by-agent\u0022, \u0022\u0022 (= daily, all sources).",
+          "required": false
+        }
+      ]
+    }
+  ]
+}

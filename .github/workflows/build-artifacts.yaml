@@ -1,0 +1,192 @@
+name: Build artifacts
+
+# Reusable build matrix shared by ci.yaml and release.yaml (spec §9.1): each leg
+# uploads the engine as `ccusage-<rid>` and, except win-arm64, the Native AOT
+# server as `ccusage-mcp-<rid>`; `bundle` then assembles `ccusage.mcpb`, the
+# per-platform archives and SHA256SUMS as `ccusage-release-assets`.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit, branch or tag to build
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  build:
+    name: build ${{ matrix.rid }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # `server` is set on every leg: GitHub's loose equality coerces both a
+        # missing key (null) and false to 0, so `matrix.server != false` would
+        # skip the server on every leg that omitted the key.
+        include:
+          - rid: linux-x64
+            os: ubuntu-latest
+            engine: nix-static
+            arch: x64
+            server: true
+          - rid: linux-arm64
+            os: ubuntu-24.04-arm
+            engine: nix-static
+            arch: arm64
+            server: true
+          # Both macOS legs run on Intel: macos-latest (arm64) runners are
+          # often unavailable for hours, which blocked the whole chain (spec
+          # §16 item 8). osx-arm64 is cross-built for `target`, and `macho`
+          # is the architecture `lipo -archs` must report for both binaries.
+          - rid: osx-arm64
+            os: macos-15-intel
+            engine: cargo-mac
+            target: aarch64-apple-darwin
+            macho: arm64
+            server: true
+          - rid: osx-x64
+            os: macos-15-intel
+            engine: cargo-mac
+            target: x86_64-apple-darwin
+            macho: x86_64
+            server: true
+          - rid: win-x64
+            os: windows-latest
+            engine: cargo-win
+            arch: x64
+            server: true
+          # The bundle ships only the win-x64 server, which runs emulated on
+          # Windows ARM64 (spec §7.3), so this leg builds the engine alone.
+          - rid: win-arm64
+            os: windows-11-arm
+            engine: cargo-win
+            arch: arm64
+            server: false
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: ./.github/actions/build-linux-native-package
+        if: matrix.engine == 'nix-static'
+        with:
+          rid: ${{ matrix.rid }}
+          binary: result/bin/ccusage
+          cache-scope: ${{ matrix.rid }}
+          nix-github-token: ${{ github.event_name != 'pull_request' }}
+
+      # Only the arm64 leg saves its Cargo cache; see the action for the
+      # additional main-only conditions.
+      - uses: ./.github/actions/build-windows-native-package
+        if: matrix.engine == 'cargo-win'
+        with:
+          binary: rust/target/release/ccusage.exe
+          rid: ${{ matrix.rid }}
+          save-cargo-cache: ${{ matrix.arch == 'arm64' }}
+
+      # Both macOS legs build with cargo on the Intel runner for the leg's
+      # `target`: x86_64 natively, aarch64 cross-compiled (Apple clang and the
+      # SDK are multi-arch). The minimal profile of the pinned channel plus the
+      # target's standard library is enough for a release build;
+      # RUSTUP_TOOLCHAIN takes precedence over rust-toolchain.toml, so cargo
+      # does not install its extra components.
+      - name: Install Rust toolchain
+        id: toolchain
+        if: matrix.engine == 'cargo-mac'
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          channel="$(sed -n 's/^channel *= *"\([^"]*\)".*/\1/p' rust-toolchain.toml)"
+          if [ -z "$channel" ]; then
+            echo "::error file=rust-toolchain.toml::no channel found"
+            exit 1
+          fi
+          rustup toolchain install "$channel" --profile minimal --no-self-update --target "$TARGET"
+          echo "channel=$channel" >> "$GITHUB_OUTPUT"
+
+      - name: Build Cargo native binary
+        if: matrix.engine == 'cargo-mac'
+        shell: bash
+        env:
+          RUSTUP_TOOLCHAIN: ${{ steps.toolchain.outputs.channel }}
+          TARGET: ${{ matrix.target }}
+        run: cargo build --manifest-path rust/Cargo.toml --release --bin ccusage --features fetch-litellm-pricing --target "$TARGET"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: matrix.engine == 'cargo-mac'
+        with:
+          name: ccusage-${{ matrix.rid }}
+          path: rust/target/${{ matrix.target }}/release/ccusage
+          if-no-files-found: error
+
+      # On the osx-arm64 leg this is a Native AOT cross-arch publish from the
+      # Intel runner.
+      - uses: ./.github/actions/publish-mcp-server
+        id: server
+        if: matrix.server != false
+        with:
+          rid: ${{ matrix.rid }}
+
+      # Nothing in the gating path runs the osx-arm64 binaries on arm64 (the
+      # arm64 jobs in ci.yaml are non-blocking), so this check is what stops a
+      # wrong-arch engine or server from shipping: a failure here fails
+      # `build`, so `bundle` and a release never see the artifacts.
+      - name: Verify Mach-O architecture
+        if: matrix.engine == 'cargo-mac'
+        shell: bash
+        env:
+          EXPECTED: ${{ matrix.macho }}
+          ENGINE: rust/target/${{ matrix.target }}/release/ccusage
+          SERVER_DIR: ${{ steps.server.outputs.directory }}
+        run: |
+          for binary in "$ENGINE" "$SERVER_DIR/ccusage-mcp"; do
+            if ! archs="$(lipo -archs "$binary" 2>&1)"; then
+              echo "::error::$binary is not a Mach-O binary: $archs"
+              exit 1
+            fi
+            echo "$binary: $archs"
+            if [ "$archs" != "$EXPECTED" ]; then
+              echo "::error::$binary is built for '$archs', expected '$EXPECTED'"
+              exit 1
+            fi
+          done
+
+  bundle:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      # One directory per artifact (no merge-multiple): assemble-bundle.sh reads
+      # <artifacts>/ccusage-<rid>/ccusage[.exe] and
+      # <artifacts>/ccusage-mcp-<rid>/ccusage-mcp[.exe].
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: ccusage-*
+          path: ${{ runner.temp }}/artifacts
+
+      - name: Assemble and verify bundle
+        run: |
+          version="$(jq -r .version package.json)"
+          dotnet/packaging/assemble-bundle.sh --version "$version" --artifacts "$RUNNER_TEMP/artifacts" --out dist
+          dotnet/packaging/verify-bundle.sh dist/ccusage.mcpb --version "$version"
+          du -h dist/ccusage.mcpb | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ccusage-release-assets
+          path: dist/*
+          if-no-files-found: error

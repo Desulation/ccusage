@@ -1,28 +1,22 @@
 ---
 name: development
-description: Guides ccusage monorepo development. Use when editing workspace packages, the npm launcher or native packaging, dependencies, or shared configuration, and when running the `just` build, typecheck, test, format, or check recipes.
+description: Guides ccusage monorepo development. Use when editing workspace packages, dependencies, or shared configuration, and when running the `just` build, typecheck, test, format, or check recipes.
 ---
 
 # ccusage Development
 
 Root `AGENTS.md` holds the repository shape and the standing policies. This
-skill is about working in the tree: the npm packaging seam, the recipes, and
+skill is about working in the tree: the MCP packaging seam, the recipes, and
 validation.
 
-## The npm Packaging Seam
+## The MCP Packaging Seam
 
-`apps/ccusage` is the npm shell around the Rust binary — package metadata,
-`config-schema.json`, and the packaging and benchmark scripts. Its
-`src/cli.js` launcher resolves the platform binary from the matching
-`@ccusage/ccusage-<platform>-<arch>` optional dependency and spawns it; those
-packages live in `packages/ccusage-<platform>-<arch>` and ship nothing but
-`bin/ccusage`.
-
-The Nushell scripts in `apps/ccusage/scripts/` own the binary side and share
-`native-binary.nu`: `ensure-native-binary.nu` puts a usable, portable binary in
-place for a local build, `stage-native-package.nu` fills one platform package,
-and `verify-native-package.nu` runs from each platform package's `prepack`. A
-packaging change usually touches the launcher and those scripts together.
+`dotnet/` is the C# MCP server that wraps the Rust binary; the `dotnet` skill
+and `dotnet/AGENTS.md` cover it. `dotnet/packaging/*` holds the `.mcpb`
+manifest template, the Linux/macOS arch launcher and the bundle scripts,
+`plugin/` is the Claude Code plugin, and `.claude-plugin/` its marketplace
+entry. The version lives in every file listed under `versionFile` in `.tagpr`;
+a packaging change usually touches those together.
 
 ## Gotchas
 

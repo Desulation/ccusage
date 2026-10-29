@@ -1,6 +1,6 @@
 ---
 name: nushell
-description: Guides ccusage Nushell scripts. Use when adding, editing, formatting, or validating .nu files under .github/scripts, apps/ccusage/scripts, or scripts, including their Nix shebangs and GitHub Actions callers.
+description: Guides ccusage Nushell scripts. Use when adding, editing, formatting, or validating .nu files under .github/scripts or scripts, including their Nix shebangs and GitHub Actions callers.
 paths:
   - '**/*.nu'
 globs: '*.nu'
@@ -13,7 +13,7 @@ Write it that way: pipelines of transformations over records and tables, not bas
 with different syntax. Root `AGENTS.md` says when to pick Nushell over Babashka,
 Rust, or TypeScript.
 
-Scripts live in `.github/scripts/`, `apps/ccusage/scripts/`, and `scripts/`.
+Scripts live in `.github/scripts/` and `scripts/`.
 
 ## Runtime Shape
 
@@ -21,11 +21,11 @@ Every executable script is a `.nu` file with a Nix shebang and a `def main`; tha
 shebang is how CI gets an interpreter, rather than a `nushell` profile install in
 the workflow. List only the tools the script directly invokes; `--inputs-from` is relative to
 the script's own directory, so its depth differs per directory — copy the header
-from a neighbor, such as `.github/scripts/upsert-pr-comment.nu` or
-`apps/ccusage/scripts/stage-native-package.nu`.
+from a neighbor, such as `.github/scripts/update-litellm-lock.nu` or
+`scripts/validate-commit-scope.nu`.
 
 Files that exist only to be imported as modules carry no shebang and no `main`:
-`.github/scripts/pricing-lock.nu`, `apps/ccusage/scripts/native-binary.nu`.
+`.github/scripts/pricing-lock.nu`.
 
 Workflows run these scripts through the shebang, but the commit-msg hook in
 `nix/git-hooks.nix` invokes `scripts/validate-commit-scope.nu` as an argument to

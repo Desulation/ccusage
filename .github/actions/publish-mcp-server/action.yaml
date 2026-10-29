@@ -1,0 +1,49 @@
+name: Publish ccusage MCP server
+description: >
+  Publish the Native AOT ccusage-mcp server for one runtime identifier and
+  upload it as `ccusage-mcp-<rid>`. Fails on any trim or AOT (IL) warning.
+inputs:
+  rid:
+    description: .NET runtime identifier to publish for (for example linux-x64)
+    required: true
+outputs:
+  directory:
+    description: Directory holding the published `ccusage-mcp[.exe]`
+    value: ${{ steps.publish.outputs.directory }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+      with:
+        global-json-file: dotnet/global.json
+
+    # Runs from dotnet/ so the SDK resolves dotnet/global.json, the same way
+    # local builds and tests do; the repository root has no global.json.
+    # Nothing here depends on the runner's architecture: the SDK restores the
+    # host's ILCompiler and the AOT runtime packages of `rid`, so the Intel
+    # macOS runner publishes osx-arm64 as well as osx-x64.
+    - name: Publish AOT server
+      id: publish
+      shell: bash
+      working-directory: dotnet
+      env:
+        RID: ${{ inputs.rid }}
+      run: |
+        dotnet publish src/Ccusage.Mcp -c Release -r "$RID" -o "$RUNNER_TEMP/server" 2>&1 | tee "$RUNNER_TEMP/publish.log"
+        if grep -E 'warning IL[0-9]+' "$RUNNER_TEMP/publish.log"; then
+          echo "::error::trim/AOT warnings"
+          exit 1
+        fi
+        echo "directory=$RUNNER_TEMP/server" >> "$GITHUB_OUTPUT"
+
+    - name: Drop debug symbols
+      shell: bash
+      run: |
+        rm -f "$RUNNER_TEMP"/server/*.pdb "$RUNNER_TEMP"/server/*.dbg
+        rm -rf "$RUNNER_TEMP"/server/*.dSYM
+
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: ccusage-mcp-${{ inputs.rid }}
+        path: ${{ runner.temp }}/server/ccusage-mcp*
+        if-no-files-found: error

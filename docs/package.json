@@ -5,13 +5,11 @@
 	"description": "Documentation for coding (agent) CLI usage analysis with ccusage",
 	"type": "module",
 	"scripts": {
-		"build": "cp ../apps/ccusage/config-schema.json public/config-schema.json && vitepress build",
-		"dev": "cp ../apps/ccusage/config-schema.json public/config-schema.json && vitepress dev"
+		"build": "cp ../config-schema.json public/config-schema.json && vitepress build",
+		"dev": "cp ../config-schema.json public/config-schema.json && vitepress dev"
 	},
 	"devDependencies": {
 		"@ryoppippi/vite-plugin-cloudflare-redirect": "catalog:docs",
-		"@types/node": "catalog:types",
-		"@types/react": "catalog:types",
 		"vitepress": "catalog:docs",
 		"vitepress-plugin-group-icons": "catalog:docs",
 		"vitepress-plugin-llms": "catalog:docs"

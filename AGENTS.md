@@ -7,9 +7,9 @@ skills below and loads when the task triggers them.
 
 - `development` - monorepo layout, `just` recipes, dev-shell environment, dependency and tooling policy, validation, releases.
 - `rust` - `rust/crates` and `rust/adapters` implementation: crate roles, module layout, visibility and `just hawk`, embedded pricing, behavior parity.
-- `typescript` - `.ts`, `.tsx`, `.js`, and `.jsx` package and tooling code, typed literals, launchers, schema tooling.
+- `dotnet` - `dotnet/` C# MCP server: catalog, validator, engine runner, MCP handlers, packaging, MSTest.
 - `agent-sources` - agent log locations, raw record shapes, token mappings, cost modes, source-specific CLI behavior.
-- `testing` - cargo and Node tests, CLI snapshots, fixtures, pricing and model tests.
+- `testing` - cargo and MSTest tests, CLI snapshots, fixtures, pricing and model tests.
 - `tdd` - Red-Green-Refactor workflow for logic changes.
 - `profile` - CLI and script performance, branch-vs-main comparisons.
 - `rust-binary-size` - release profile, dependency features, native packaging size, executable bloat.
@@ -27,12 +27,11 @@ skills below and loads when the task triggers them.
 
 The production CLI is Rust-first. Source-specific runtime behavior belongs in
 `rust/adapters/<agent>`, shared behavior in `ccusage-core` or `ccusage-adapter-common`.
-`apps/ccusage` is the npm surface only - bin launcher, schema artifact, packaging and benchmark
-scripts - and not a place for adapter logic.
+`dotnet/` is the MCP distribution layer: it wraps the `ccusage` binary and adds no adapter logic.
 
 Read the nearest `AGENTS.md` before editing:
 
-- `apps/ccusage/AGENTS.md` - published npm package
+- `dotnet/AGENTS.md` - C# MCP server
 - `rust/adapters/AGENTS.md` - adapter crates
 - `docs/AGENTS.md` - VitePress documentation site
 
@@ -41,7 +40,7 @@ Read the nearest `AGENTS.md` before editing:
 - The canonical command is `ccusage` with agent subcommands, such as `ccusage codex daily`. The
   standalone wrapper packages `ccusage-amp`, `ccusage-codex`, `ccusage-opencode`, and `ccusage-pi`
   were removed; do not reintroduce them in code, docs, tests, or examples.
-- Runtime libraries for bundled packages go in `devDependencies` unless the user asks otherwise.
+- C# only in `dotnet/`; any third-party NuGet package needs explicit approval (spec §12).
 - Language choice: Rust for production binaries and CPU- or memory-intensive tooling; Nushell for
   small automation that mostly orchestrates external commands, files, HTTP, and JSON; Babashka once
   automation grows a reusable data model, several transformation stages, substantial reporting

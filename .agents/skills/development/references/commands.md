@@ -13,8 +13,8 @@ and `just <module>::--list` lists one module. Whole-repo jobs the Nix flake owns
 
 `comma` and `nix run` are fine for one-off investigation, but anything used
 repeatedly belongs in the repo: system and dev-shell CLIs in `flake.nix`
-(`nix/dev-shell.nix` is the current list), JS/TS tooling and scripts in
-`package.json`. Land the matching lockfile update — `flake.lock`,
+(`nix/dev-shell.nix` is the current list), docs-site tooling in
+`docs/package.json`. Land the matching lockfile update — `flake.lock`,
 `pnpm-lock.yaml` — in the same commit so the addition stays independently
 revertable.
 
@@ -30,7 +30,9 @@ Narrower package recipes are useful while iterating; finish with the root ones.
 ## Releases
 
 Releases are managed by tagpr: merging the auto-generated release PR tags the
-merge commit and triggers the publish workflow. The bump is patch by default;
+merge commit; `release.yaml` builds the matrix, bundles `ccusage.mcpb`, and
+creates the GitHub Release. `sync-upstream.yaml` opens the weekly upstream PR.
+The bump is patch by default;
 label a merged PR `minor` or `major` to raise it.
 
 https://github.com/Songmu/tagpr

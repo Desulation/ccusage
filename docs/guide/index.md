@@ -38,7 +38,7 @@ ccusage reads the local usage files that coding CLIs already generate and provid
 
 ### 🚀 Direct Execution
 
-You can run ccusage without a global install using `bunx ccusage` (recommended), `pnpm dlx ccusage`, or `npx ccusage@latest`.
+Ask Claude through the ccusage [MCP server](/guide/mcp) (the Claude Code plugin installs it), or run the standalone `ccusage` binary from a release archive. See [Installation](/guide/installation).
 
 ### 📊 Usage Views
 

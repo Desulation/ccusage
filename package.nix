@@ -15,9 +15,9 @@ let
   # falls back to reading it when CCUSAGE_VERSION is unset, and a test in main.rs
   # asserts the compiled version matches it.
   inherit (lib.importJSON (root + /package.json)) version;
-  # The published npm manifest owns the name and the user-facing metadata, so
+  # The root manifest also owns the name and the user-facing metadata, so
   # `meta` below derives from it instead of restating it in Nix.
-  cliPackageJson = lib.importJSON (root + /apps/ccusage/package.json);
+  rootPackageJson = lib.importJSON (root + /package.json);
   src = lib.cleanSourceWith {
     src = root + /rust;
     filter =
@@ -38,7 +38,7 @@ let
   # duplicated.
   cargoConfigEnv = (builtins.fromTOML (builtins.readFile (root + /.cargo/config.toml))).env;
   commonArgs = {
-    pname = cliPackageJson.name;
+    pname = rootPackageJson.name;
     inherit version src;
     # Vendoring from mkDummySrc would be import-from-derivation.
     cargoVendorDir = craneLib.vendorCargoDeps { inherit src; };
@@ -73,7 +73,7 @@ let
   }
   // cargoConfigEnv;
   # Keep the dependency artifact keyed only by inputs that affect Cargo deps.
-  # Pricing snapshots and the npm release version are embedded by the final
+  # Pricing snapshots and the release version are embedded by the final
   # package. The Rust workspace packages intentionally stay at 0.0.0, and the
   # dummy manifest filter makes that version metadata irrelevant to dependency
   # resolution too.
@@ -143,9 +143,9 @@ craneLib.buildPackage (
         ;
     };
     meta = {
-      inherit (cliPackageJson) description homepage;
-      license = lib.getLicenseFromSpdxId cliPackageJson.license;
-      mainProgram = builtins.head (builtins.attrNames cliPackageJson.bin);
+      inherit (rootPackageJson) description homepage;
+      license = lib.getLicenseFromSpdxId rootPackageJson.license;
+      mainProgram = "ccusage";
     };
   }
 )

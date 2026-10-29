@@ -49,8 +49,6 @@ Rust tests live in the `rust/Cargo.toml` workspace. Prefix with `direnv exec .` 
 ```sh
 direnv exec . cargo test --manifest-path rust/Cargo.toml --workspace <name-filter>
 direnv exec . cargo test --manifest-path rust/Cargo.toml --workspace -- --ignored
-
-node --test --test-name-pattern '<name-filter>' apps/ccusage/src/cli.test.ts
 ```
 
 `just test` runs both suites, `just rust::test` the Rust one, `just test-node` the
