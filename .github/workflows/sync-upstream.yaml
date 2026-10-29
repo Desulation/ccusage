@@ -1,0 +1,64 @@
+# Opens (or updates) a pull request that brings ccusage/ccusage `main` into
+# this fork (spec §9.4). It force-pushes upstream's tip to `sync/upstream` and
+# never pushes to `main`; conflicts are resolved in the pull request.
+#
+# The pull request is opened with GITHUB_TOKEN, so CI does not run on it
+# automatically. Run CI by hand on the branch:
+#   gh workflow run ci.yaml --ref sync/upstream
+name: sync upstream
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency: sync-upstream
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # persist-credentials stays on (default) so the push to sync/upstream
+      # below can authenticate.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/ccusage/ccusage.git
+          git fetch upstream main
+      - name: Check whether upstream is already merged
+        id: check
+        run: |
+          if git merge-base --is-ancestor upstream/main origin/main; then
+            echo up_to_date=true >> "$GITHUB_OUTPUT"
+          fi
+      - name: Push upstream to sync/upstream
+        if: steps.check.outputs.up_to_date != 'true'
+        run: git push --force origin upstream/main:refs/heads/sync/upstream
+      # Commit subjects are upstream-controlled text, so the body goes through a
+      # file and never through a shell string. --repo is explicit because gh
+      # would otherwise resolve the `upstream` remote ahead of `origin`.
+      - name: Open or update the pull request
+        if: steps.check.outputs.up_to_date != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            printf 'Incoming commits from ccusage/ccusage main:\n\n'
+            git log --oneline --no-decorate origin/main..upstream/main
+          } > "$RUNNER_TEMP/body.md"
+          n=$(gh pr list --repo "$GITHUB_REPOSITORY" --head sync/upstream --base main --state open --json number -q '.[0].number')
+          if [ -n "$n" ]; then
+            gh pr edit "$n" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head sync/upstream \
+              --title 'chore(deps): sync upstream ccusage/ccusage' \
+              --body-file "$RUNNER_TEMP/body.md"
+          fi
