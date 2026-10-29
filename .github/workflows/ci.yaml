@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Dispatched by release.yaml for tagpr's release PR.
+  # Dispatched by release.yaml for tagpr's release PR, and by hand for the
+  # sync/upstream PR, whose GITHUB_TOKEN-opened PR triggers no CI (spec §9.4).
   workflow_dispatch:
 
 permissions: read-all
@@ -31,7 +32,7 @@ jobs:
   # the flake's pinned package so CI matches the dev shell.
   tirith-scan:
     name: tirith security scan
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     # Read-only: this job executes PR-controlled code (the local action, the PR
     # flake, the installed tirith), so it must hold no write scopes. The SARIF
@@ -143,7 +144,7 @@ jobs:
   # of the slowest build, and `ci-gate` still requires it to pass.
   preflight:
     name: security & lint preflight
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -159,7 +160,7 @@ jobs:
   test:
     needs: [changes, tirith-scan]
     if: needs.changes.outputs.code-changed == 'true'
-    runs-on: blacksmith-32vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
@@ -176,429 +177,247 @@ jobs:
             run: nix flake check --print-build-logs
           - name: Run Rust tests
             run: nix build .#ccusage-tests --print-build-logs
-          - name: JS test
-            run: |
-              nix profile install --inputs-from . .#pnpm nixpkgs#nodejs nixpkgs#just
-              pnpm install --frozen-lockfile
-              mkdir -p "$HOME/.claude/projects"
-              mkdir -p "$HOME/.config/claude/projects"
-              just test-node
-          - name: Nushell contribution-gate tests
-            run: .github/scripts/contribution-gate.test.nu
-          - name: Babashka performance harness test
-            run: apps/ccusage/scripts/compare-pr-performance_test.clj
-      # The dev-profile test and hawk dependency layers are only reused if the
-      # sticky disk keeps them, and this job roots nothing else. Rooting them in
-      # the store's own gcroots protects them from the next trim (see
-      # build-linux-native-package); only main commits the disk, so PRs skip it.
-      - name: Root test dependency layers for the sticky disk
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: |
-          mkdir -p /nix/var/nix/gcroots/ci
-          nix build .#ccusage-tests.passthru.cargoArtifacts \
-            --out-link /nix/var/nix/gcroots/ci/ccusage-test-deps
-          nix build .#ccusage-tests.passthru.hawkArtifacts \
-            --out-link /nix/var/nix/gcroots/ci/ccusage-hawk-deps
 
-  build-native-packages:
+  # Unit, runner, drift and schema-snapshot tests of the C# server (spec §9.2).
+  # The e2e tests report inconclusive here; the `e2e` job runs them against the
+  # built artifacts.
+  dotnet-test:
+    name: dotnet test (${{ matrix.os }})
     needs: [changes, tirith-scan]
     if: needs.changes.outputs.code-changed == 'true'
-    name: ${{ matrix.name }}
-    permissions:
-      actions: write
-      contents: read
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: build-linux-arm64
-            os: blacksmith-32vcpu-ubuntu-2404-arm
-            platform: linux
-            arch: arm64
-            binary: result/bin/ccusage
-          - name: build-linux-x64
-            os: blacksmith-32vcpu-ubuntu-2404
-            platform: linux
-            arch: x64
-            binary: result/bin/ccusage
-          - name: build-mac-arm64
-            os: blacksmith-12vcpu-macos-26
-            platform: darwin
-            arch: arm64
-            binary: result/bin/ccusage
-          - name: build-mac-x64
-            os: blacksmith-12vcpu-macos-26
-            platform: darwin
-            arch: x64
-            binary: result/bin/ccusage
-          - name: build-windows-x64
-            os: blacksmith-32vcpu-windows-2025
-            platform: win32
-            arch: x64
-            binary: rust/target/release/ccusage.exe
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/build-linux-native-package
-        if: matrix.platform == 'linux'
-        with:
-          arch: ${{ matrix.arch }}
-          binary: ${{ matrix.binary }}
-          nix-github-token: ${{ github.event_name != 'pull_request' }}
-          cache-scope: ${{ matrix.name }}
-      - uses: ./.github/actions/build-macos-nix-native-package
-        if: matrix.platform == 'darwin'
-        with:
-          arch: ${{ matrix.arch }}
-          binary: ${{ matrix.binary }}
-          cache-scope: ${{ matrix.name }}
-      - uses: ./.github/actions/build-windows-native-package
-        if: matrix.platform == 'win32'
-        with:
-          arch: ${{ matrix.arch }}
-          binary: ${{ matrix.binary }}
-
-  npm-publish-dry-run-and-upload-pkg-pr-now:
-    # preflight gates the publish rather than the builds: a leaked secret must
-    # never reach pkg.pr.new, and it finishes long before the builds do.
-    needs:
-      - changes
-      - preflight
-      - build-native-packages
-    if: needs.changes.outputs.code-changed == 'true'
-    permissions:
-      actions: read
-      contents: read
-    runs-on: blacksmith-32vcpu-ubuntu-2404
-    outputs:
-      urls: ${{ steps.publish.outputs.urls }}
-      preview-url: ${{ steps.preview-url.outputs.url }}
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup-nix-cache
-      # Packing only repackages the native binaries restored from the build
-      # matrix below (no Rust build happens here), so the full `nix develop` dev
-      # shell is unnecessary. The package checks bring Nu through their Nix
-      # shebangs; `publint` is the flake's own pinned build, invoked by every
-      # package's prepack script.
-      - run: nix profile install --inputs-from . .#pnpm nixpkgs#nodejs .#publint
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          pattern: ccusage-native-*
-          path: ${{ runner.temp }}/native-packages
-          merge-multiple: true
-      - name: Restore native package binaries
-        run: |
-          for archive in "$RUNNER_TEMP"/native-packages/*.tar; do
-            tar -xf "$archive"
-          done
-      - id: publish
-        # Fetched on demand rather than carried as a root devDependency: this
-        # job is the only thing that runs it, and it never needs to resolve
-        # against the workspace. Renovate does not update `dlx` specifiers, so
-        # bump the pin here by hand.
-        run: pnpm dlx pkg-pr-new@0.0.75 publish --pnpm --bin './apps/ccusage' './packages/ccusage-linux-arm64' './packages/ccusage-linux-x64' './packages/ccusage-darwin-arm64' './packages/ccusage-darwin-x64' './packages/ccusage-win32-x64'
-      # Resolve the ccusage CLI preview URL and build the E2E fixture here (this
-      # job has the checkout); the E2E jobs then run without a checkout.
-      - id: preview-url
-        env:
-          URLS: ${{ steps.publish.outputs.urls }}
-        run: |
-          node <<'JS'
-          const urls = (process.env.URLS ?? '').split(/\s+/).filter(Boolean);
-          const url = urls.find((value) => /(?:^|\/)ccusage@/.test(value));
-          if (url == null) {
-            throw new Error(`ccusage preview URL not found in: ${urls.join(', ')}`);
-          }
-          require('node:fs').appendFileSync(process.env.GITHUB_OUTPUT, `url=${url}\n`);
-          JS
-      - name: Generate E2E fixture
-        run: .github/scripts/generate-e2e-fixture.nu "$RUNNER_TEMP/e2e-fixture"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ccusage-e2e-fixture
-          path: ${{ runner.temp }}/e2e-fixture
-          if-no-files-found: error
-
-  ccusage-preview-e2e:
-    # Run on PRs and on pushes to the default branch. `push` only fires on main
-    # (see on.push.branches), so this validates the published preview package
-    # post-merge too, not just on PRs.
-    if: needs.changes.outputs.code-changed == 'true'
-    name: e2e ${{ matrix.runner }} (${{ matrix.os }})
-    needs:
-      - changes
-      - npm-publish-dry-run-and-upload-pkg-pr-now
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
-    # No checkout on purpose: the working directory stays empty so each package
-    # runner behaves like a real end user instead of inheriting the repo's
-    # pnpm-workspace.yaml / package.json (which is why pnpm previously needed
-    # --config overrides). The preview URL and the fixture come from the publish
-    # job via a job output and an artifact.
-    env:
-      CCUSAGE_PREVIEW_URL: ${{ needs.npm-publish-dry-run-and-upload-pkg-pr-now.outputs.preview-url }}
-      LOG_LEVEL: '0'
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - blacksmith-32vcpu-ubuntu-2404
-          - blacksmith-32vcpu-ubuntu-2404-arm
-          - blacksmith-12vcpu-macos-26
-          # Intel macOS to exercise the cross-built x86_64 darwin binary on real
-          # Intel hardware (the build runner is arm64).
-          - macos-15-intel
-          - blacksmith-32vcpu-windows-2025
-        # One job per package runner, each installed via its official action.
-        # Excluded:
-        #   yarn - no official install action (it expects corepack, which we avoid)
-        runner:
-          - npm
-          - pnpm
-          - bun
-
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    # dotnet/global.json selects the SDK and the Microsoft.Testing.Platform
+    # runner; the SDK only finds it when run from dotnet/.
+    defaults:
+      run:
+        shell: bash
+        working-directory: dotnet
     steps:
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: lts/*
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        if: matrix.runner == 'pnpm'
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          version: latest
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        if: matrix.runner == 'bun'
-        with:
-          bun-version: latest
-      - name: Download E2E fixture
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # actions/download-artifact talks to the artifact backend through the
-          # Blacksmith-proxied results-receiver endpoint, whose local agent is
-          # not yet listening in the first seconds after a macOS VM boots: the
-          # download runs ~2s in and intermittently hits ECONNREFUSED on
-          # ListArtifacts (re-running the job, once the agent is warm, succeeds).
-          # gh run download uses the api.github.com REST API directly, sidestepping
-          # that proxy, and we retry with backoff to ride out any transient hiccup.
-          # These jobs skip actions/checkout, so create a minimal git context
-          # for gh instead of relying on --repo (which some gh versions still
-          # follow with a local git probe).
-          $gitDir = "$env:RUNNER_TEMP/gh-context"
-          New-Item -ItemType Directory -Force -Path $gitDir | Out-Null
-          Push-Location $gitDir
-          git init -q
-          git remote add origin "https://github.com/$env:GITHUB_REPOSITORY.git"
-          Pop-Location
-          $dir = "$env:RUNNER_TEMP/e2e-fixture"
-          for ($i = 1; $i -le 5; $i++) {
-            Push-Location $gitDir
-            gh run download $env:GITHUB_RUN_ID --name ccusage-e2e-fixture --dir $dir
-            Pop-Location
-            if ($LASTEXITCODE -eq 0) { break }
-            if ($i -eq 5) { throw "failed to download the E2E fixture after 5 attempts" }
-            Start-Sleep -Seconds ($i * 5)
-          }
-          "CLAUDE_CONFIG_DIR=$dir" >> $env:GITHUB_ENV
-      - name: Run preview E2E
-        shell: pwsh
-        env:
-          RUNNER_KIND: ${{ matrix.runner }}
-          # pnpm defaults minimumReleaseAge to 1440 (24h), which would reject
-          # a pkg.pr.new preview published moments ago. Opt out via the config
-          # env var (only pnpm reads PNPM_CONFIG_*, so npm ignores it).
-          # https://pnpm.io/settings#minimumreleaseage
-          PNPM_CONFIG_MINIMUM_RELEASE_AGE: '0'
-          # pnpm also defaults blockExoticSubdeps to true, which rejects the
-          # URL-resolved native optional deps (e.g. @ccusage/ccusage-linux-x64)
-          # that pkg.pr.new injects into the published ccusage manifest. Allow
-          # them so `pnpm dlx <url>` can install the matching native binary.
-          # https://pnpm.io/settings#blockexoticsubdeps
-          PNPM_CONFIG_BLOCK_EXOTIC_SUBDEPS: 'false'
-        run: |
-          # pnpm dlx on Windows doesn't install optional native binaries into its
-          # temporary store, so the CLI launcher fails with spawn ENOENT; skip
-          # that one combination.
-          if ($env:RUNNER_KIND -eq 'pnpm' -and $IsWindows) {
-            Write-Host 'skip: pnpm dlx on Windows cannot install the native binary'
-            exit 0
-          }
-          $url = $env:CCUSAGE_PREVIEW_URL
-          function Invoke-Ccusage([string[]]$ccArgs) {
-            switch ($env:RUNNER_KIND) {
-              'npm' { return (npx --yes $url @ccArgs) }
-              'pnpm' { return (pnpm dlx $url @ccArgs) }
-              # bunx rejects a bare URL as the package, so name the binary.
-              'bun' { return (bunx --package $url ccusage @ccArgs) }
-            }
-          }
-          Invoke-Ccusage @('--version') | Out-Host
-          if ($LASTEXITCODE -ne 0) { throw '--version failed' }
-          # Exercise every report command, both offline and online (online fetches
-          # live pricing), validating the JSON output each time.
-          foreach ($cmd in 'daily', 'monthly', 'session') {
-            foreach ($mode in @(@('--offline'), @())) {
-              $label = "$cmd $($mode -join ' ')".Trim()
-              Invoke-Ccusage (@($cmd) + $mode) | Out-Host
-              if ($LASTEXITCODE -ne 0) { throw "ccusage $label failed ($LASTEXITCODE)" }
-              $json = Invoke-Ccusage (@($cmd) + $mode + @('--json'))
-              if ($LASTEXITCODE -ne 0) { throw "ccusage $label --json failed ($LASTEXITCODE)" }
-              $json | node -e "JSON.parse(require('fs').readFileSync(0, 'utf8'))"
-              if ($LASTEXITCODE -ne 0) { throw "ccusage $label --json produced invalid JSON" }
-              Write-Host "ok: $label"
-            }
-          }
+          global-json-file: dotnet/global.json
+      - name: Build
+        run: dotnet build Ccusage.Mcp.slnx -c Release
+      - name: Test
+        run: dotnet test --project Ccusage.Mcp.slnx -c Release --no-build
 
-  ccusage-perf-comment:
-    name: ccusage ${{ matrix.label }}
-    if: github.event_name == 'pull_request' && needs.changes.outputs.code-changed == 'true'
-    needs:
-      - changes
-      - npm-publish-dry-run-and-upload-pkg-pr-now
+  # The six-RID engine and server matrix plus the bundle (spec §9.1).
+  build-artifacts:
+    needs: [changes, tirith-scan]
+    if: needs.changes.outputs.code-changed == 'true'
     permissions:
       contents: read
-      pull-requests: write
-      issues: write
-    runs-on: blacksmith-32vcpu-ubuntu-2404
-    timeout-minutes: 30
+      actions: write
+    uses: ./.github/workflows/build-artifacts.yaml
+    with:
+      ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  # The published server and the real engine against the fixtures through the
+  # MCP client (spec §10.3).
+  e2e:
+    name: e2e (${{ matrix.rid }})
+    needs: build-artifacts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Same benchmark from two entry points, posted as two PR comments:
-          # the JS launcher (default runtime) and the bundled Rust native binary.
-          - runtime: js
-            label: perf comment
-            slug: perf-comment
-            head-runtime-arg: ''
-          - runtime: rust
-            label: rust perf comment
-            slug: rust-perf-comment
-            head-runtime-arg: --head-runtime rust
-
+          - os: ubuntu-latest
+            rid: linux-x64
+            exe: ''
+          - os: windows-latest
+            rid: win-x64
+            exe: .exe
+          - os: macos-latest
+            rid: osx-arm64
+            exe: ''
     steps:
-      - name: Checkout PR
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-
-      - name: Setup Nix
-        uses: ./.github/actions/setup-nix-cache
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          # This job only runs on pull requests, which never commit a sticky
-          # disk, so both legs read test's instead: it installs `just` and the
-          # same flake inputs on every push to main.
-          disk-job: test
-      # This job only benchmarks the prebuilt ccusage binary bundled in the
-      # installed pkg.pr.new package (no Rust build happens here), so the full
-      # `nix develop` dev shell is unnecessary. Install just the tools the perf
-      # scripts invoke, pinned to the flake's nixpkgs via `--inputs-from .`.
-      - name: Install perf tooling
-        run: nix profile install --inputs-from . nixpkgs#just
-
-      - name: Resolve PR preview package URL
+          global-json-file: dotnet/global.json
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ccusage-mcp-${{ matrix.rid }}
+          path: ${{ runner.temp }}/bin
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ccusage-${{ matrix.rid }}
+          path: ${{ runner.temp }}/bin
+      # upload-artifact drops the unix exec bits.
+      - name: Make binaries executable
+        shell: bash
+        run: chmod +x "$RUNNER_TEMP"/bin/* || true
+      # Both variables are set, so the e2e tests run instead of reporting
+      # inconclusive; a wrong path fails them.
+      - name: Test
+        shell: bash
+        working-directory: dotnet
         env:
-          PKG_PR_NEW_URLS: ${{ needs.npm-publish-dry-run-and-upload-pkg-pr-now.outputs.urls }}
+          CCUSAGE_MCP_E2E_SERVER: ${{ runner.temp }}/bin/ccusage-mcp${{ matrix.exe }}
+          CCUSAGE_ENGINE: ${{ runner.temp }}/bin/ccusage${{ matrix.exe }}
+        run: dotnet test --project Ccusage.Mcp.slnx -c Release
+
+  # Extracts ccusage.mcpb, starts it through the manifest command for this OS
+  # and calls initialize, tools/list, list-sources and daily. The Linux and
+  # macOS legs assert the exec bits after extraction (spec §15 Q4); the
+  # windows-11-arm leg asserts the win-x64 server selects the arm64 engine
+  # (spec §15 Q5).
+  bundle-smoke:
+    name: bundle smoke (${{ matrix.os }})
+    needs: build-artifacts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            expect: linux/x64/ccusage
+          - os: ubuntu-24.04-arm
+            expect: linux/arm64/ccusage
+          - os: macos-latest
+            expect: osx/arm64/ccusage
+          - os: macos-15-intel
+            expect: osx/x64/ccusage
+          - os: windows-latest
+            expect: 'win\x64\ccusage.exe'
+          - os: windows-11-arm
+            expect: 'win\arm64\ccusage.exe'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ccusage-release-assets
+          path: ${{ runner.temp }}/assets
+      - name: Smoke-test the bundle
+        shell: pwsh
+        env:
+          EXPECT_ENGINE_PATH: ${{ matrix.expect }}
+        run: ./dotnet/packaging/bundle-smoke.ps1 -Bundle "$env:RUNNER_TEMP/assets/ccusage.mcpb" -FixturesDir dotnet/tests/fixtures -ExpectEnginePath $env:EXPECT_ENGINE_PATH
+
+  # Validates the plugin and the marketplace with Claude Code's own strict
+  # validator, installed with its native installer at a pinned version.
+  plugin-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      CLAUDE_CODE_VERSION: 2.1.303
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Install Claude Code
         run: |
-          preview_url="$(
-            printf '%s\n' "$PKG_PR_NEW_URLS" \
-              | tr '[:space:]' '\n' \
-              | grep -E '(^|/)ccusage@' \
-              | head -n 1
-          )"
-          if [ -z "$preview_url" ]; then
-            echo "ccusage preview URL not found in: $PKG_PR_NEW_URLS" >&2
+          curl -fsSL https://claude.ai/install.sh | bash -s "$CLAUDE_CODE_VERSION"
+          installed="$("$HOME/.local/bin/claude" --version)"
+          echo "$installed"
+          case "$installed" in
+            "$CLAUDE_CODE_VERSION"*) ;;
+            *)
+              echo "::error::expected Claude Code $CLAUDE_CODE_VERSION, got: $installed"
+              exit 1
+              ;;
+          esac
+      - name: Validate plugin
+        run: |
+          "$HOME/.local/bin/claude" plugin validate --strict plugin
+      # The marketplace lives at .claude-plugin/marketplace.json (spec §15 row 7).
+      - name: Validate marketplace
+        run: |
+          "$HOME/.local/bin/claude" plugin validate --strict .
+
+  # Every place that carries the release version must agree (spec §8).
+  version-consistency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Compare versions
+        run: |
+          v=$(jq -r .version package.json)
+          d=$(jq -r .version docs/package.json)
+          p=$(jq -r .version plugin/.claude-plugin/plugin.json)
+          # An empty result (no download URL) fails the comparison below
+          # instead of aborting the step through pipefail.
+          m=$(grep -o 'download/v[0-9][0-9.]*/ccusage.mcpb' .claude-plugin/marketplace.json | sed 's#download/v##; s#/ccusage.mcpb##' || true)
+          b=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' dotnet/Directory.Build.props)
+          if [ "$v" != "$d" ] || [ "$v" != "$p" ] || [ "$v" != "$m" ] || [ "$v" != "$b" ]; then
+            echo "::error::version mismatch: package.json=$v docs=$d plugin=$p marketplace=$m props=$b"
             exit 1
           fi
-          echo "CCUSAGE_PREVIEW_URL=$preview_url" >> "$GITHUB_ENV"
+          echo "all versions are $v"
 
-      # Pricing snapshot commits are pushed to main with GITHUB_TOKEN, which
-      # triggers no CI, so they never get a preview package and the benchmark
-      # would wait out its whole package timeout for one. They do not change
-      # code, so walk back over them to the nearest commit that has a package.
-      # Any other commit without one (e.g. its CI is still running) stops the
-      # walk and keeps the real base, which is then waited for as before.
-      - name: Resolve base preview package
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          git fetch --quiet --no-tags --depth=50 origin "$BASE_SHA"
-          base="$BASE_SHA"
-          for sha in $(git rev-list --first-parent -n 50 "$BASE_SHA"); do
-            if curl --fail --head --location --silent --output /dev/null \
-              "https://pkg.pr.new/$REPOSITORY/ccusage@$sha"; then
-              base="$sha"
-              break
-            fi
-            if git diff --name-only "$sha^" "$sha" \
-              | grep -qvE '^(flake\.(lock|nix)|rust/crates/ccusage-pricing-snapshots/src/[^/]+\.json)$'; then
-              break
-            fi
-          done
-          echo "Comparing against base package ${base}"
-          echo "BASE_PACKAGE_SHA=$base" >> "$GITHUB_ENV"
-
-      - name: Generate large ccusage fixture
-        run: |
-          just generate-large-fixture \
-            "$RUNNER_TEMP/ccusage-large-fixture" \
-            "$RUNNER_TEMP/ccusage-large-codex-fixture" \
-            1024
-
-      - name: Compare performance
-        run: |
-          apps/ccusage/scripts/compare-pr-performance.bb \
-            --base-package-url "https://pkg.pr.new/${{ github.repository }}/ccusage@$BASE_PACKAGE_SHA" \
-            --base-sha "$BASE_PACKAGE_SHA" \
-            --head-dir . \
-            --head-package-url "$CCUSAGE_PREVIEW_URL" \
-            ${{ matrix.head-runtime-arg }} \
-            --fixture-dir apps/ccusage/test/fixtures/claude \
-            --codex-fixture-dir apps/ccusage/test/fixtures/codex \
-            --warmup 2 \
-            --runs 7 \
-            --large-fixture-dir "$RUNNER_TEMP/ccusage-large-fixture" \
-            --large-codex-fixture-dir "$RUNNER_TEMP/ccusage-large-codex-fixture" \
-            --large-warmup 0 \
-            --large-runs 1 \
-            --package-runner-timeout-ms 300000 \
-            --output "$RUNNER_TEMP/ccusage-${{ matrix.slug }}.md"
-
-      - name: Write job summary
-        run: cat "$RUNNER_TEMP/ccusage-${{ matrix.slug }}.md" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upsert PR comment
-        if: ${{ !github.event.pull_request.head.repo.fork }}
-        env:
-          COMMENT_FILE: ${{ runner.temp }}/ccusage-${{ matrix.slug }}.md
-          COMMENT_MARKER: <!-- ccusage-${{ matrix.slug }}:${{ github.event.pull_request.head.sha }} -->
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: .github/scripts/upsert-pr-comment.nu
-
-  action-timeline:
-    needs:
-      - changes
-      - tirith-scan
-      - tirith-sarif-upload
-      - preflight
-      - test
-      - build-native-packages
-      - npm-publish-dry-run-and-upload-pkg-pr-now
-      - ccusage-preview-e2e
-      - ccusage-perf-comment
-    if: ${{ always() }}
-    runs-on: ubuntu-slim
+  # Builds the docs site on every change, docs-only ones included. The
+  # development machine has no pnpm, so a stale pnpm-lock.yaml is regenerated
+  # here, uploaded as the `pnpm-lock` artifact to commit, and fails the job.
+  docs-build:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
-      - uses: Kesin11/actions-timeline@57fc93f20c6da7fbc14063c6d24a2a5627c799ad # v3.2.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-nix-cache
+      - name: Install pnpm, Node and just
+        run: nix profile install --inputs-from . .#pnpm nixpkgs#nodejs nixpkgs#just
+      - name: Regenerate the lockfile
+        run: pnpm install --lockfile-only
+      - name: Check the lockfile
+        id: lockfile
+        run: |
+          if ! git diff --quiet -- pnpm-lock.yaml; then
+            echo changed=true >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.lockfile.outputs.changed == 'true'
+        with:
+          name: pnpm-lock
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build docs
+        run: just docs::build
+      - name: Fail on a stale lockfile
+        if: steps.lockfile.outputs.changed == 'true'
+        run: |
+          echo "::error::pnpm-lock.yaml is stale; download the pnpm-lock artifact and commit it"
+          exit 1
 
   # Single check for main's branch ruleset to require. Most jobs above are gated
   # on `changes` and are skipped on docs-only pull requests, so requiring them
@@ -612,10 +431,13 @@ jobs:
       - tirith-sarif-upload
       - preflight
       - test
-      - build-native-packages
-      - npm-publish-dry-run-and-upload-pkg-pr-now
-      - ccusage-preview-e2e
-      - ccusage-perf-comment
+      - dotnet-test
+      - build-artifacts
+      - e2e
+      - bundle-smoke
+      - plugin-validate
+      - version-consistency
+      - docs-build
     if: ${{ always() }}
     runs-on: ubuntu-slim
     steps:

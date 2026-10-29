@@ -10,11 +10,6 @@ inputs:
       each leg separate without leaning on runner.arch. Leave empty for
       single-leg jobs, which github.job alone already distinguishes.
     default: ''
-  disk-job:
-    description: >
-      Unused; kept so existing callers that pass it stay valid. The cache key
-      is scoped by github.job and cache-scope only.
-    default: ''
   save:
     description: >
       Whether this job may persist the store for later runs. Actions cache

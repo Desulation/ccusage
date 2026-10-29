@@ -1,9 +1,6 @@
 name: Build Windows native package
 description: Build and upload the Windows ccusage engine binary
 inputs:
-  arch:
-    description: Native package architecture
-    required: true
   rid:
     description: .NET runtime identifier naming the uploaded `ccusage-<rid>` artifact
     required: true
