@@ -42,9 +42,10 @@
 - **Never modify `rust/`.** Upstream-owned file edits are limited to §3.1/§3.2 plus §16 items 7–8. New work lives in `dotnet/`, `plugin/`, `.claude-plugin/`, new workflow/action files, `docs/guide/mcp.md`.
 - **Models:** every task states `Implementer: Opus` and `Reviewer: Opus|Fable` (§13).
 - **TDD** for all C# logic; MSTest on Microsoft.Testing.Platform (`global.json` `"test": {"runner": "Microsoft.Testing.Platform"}`). Test code blocks show `[TestMethod]` names and assertions; setup helpers are named once per task and written by the implementer.
-- **Tooling:** prefer the dotnet MCP tools — `mcp__dotnet__dotnet_sdk` (`ConfigureGlobalJson`), `mcp__dotnet__dotnet_solution` (`Create`, `Add`), `mcp__dotnet__dotnet_project` (`New`, `Build`, `Test`, `Publish`, `SetProperty`), `mcp__dotnet__dotnet_package` (`Add`, `Search`) — for creating, building, running, testing and package changes; shell `dotnet` only when no action covers it. Prefer `roslyn_*` tools for C# analysis when available. Load deferred tools with `ToolSearch` (`select:mcp__dotnet__dotnet_project,...`). Verification commands are written as shell so the expected output is unambiguous; run them through the equivalent MCP action when one exists.
-- **Environment:** Windows 11, .NET SDK 10.0.402 (+9.0.319), `cargo` 1.97.1, Claude Code 2.1.303, `gh` 2.102, Python 3.12, Git Bash, PowerShell 7. **No Nix, Node or pnpm locally.** Every verification step is tagged **[local]** or **[CI only]**. Nix and Linux/macOS behavior are [CI only]. Windows AOT publish needs the VS "Desktop development with C++" workload (Task 0 step 1); without it AOT publish is [CI only] and local checks stop at the AOT/trim analyzers on `dotnet build`.
-- **Commits:** small Conventional Commits, each ending with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Scopes: `mcp`, `plugin`, `bundle`, `ci`, `release`, `deps`, `docs`, `chore`, `spec`. **Never push** outside an answered DECISION step (Task 11b step 9, Task 14a step 12, Task 17 step 6).
+- **Tooling:** prefer the dotnet MCP tools — `mcp__dotnet__dotnet_sdk` (`ConfigureGlobalJson`), `mcp__dotnet__dotnet_solution` (`Create`, `Add`), `mcp__dotnet__dotnet_project` (`New`, `Build`, `Test`, `Publish`, `SetProperty`), `mcp__dotnet__dotnet_package` (`Add`, `Search`) — for creating, building, running, testing and package changes; shell `dotnet` only when no action covers it. Prefer `roslyn_*` tools for C# analysis when available. Load deferred tools with `ToolSearch` (`select:mcp__dotnet__dotnet_project,...`). Verification commands are written as shell so the expected output is unambiguous; run them through the equivalent MCP action when one exists. **Local AOT publish (`-r <rid>`) runs only through `mcp__dotnet__dotnet_project` `Publish`**: from the agent's Git Bash and PowerShell shells the native link step fails (§15 environment notes).
+- **Environment:** Windows 11, .NET SDK 10.0.402 (+9.0.319), `cargo` 1.97.1, Claude Code 2.1.303, `gh` 2.102, Python 3.12, Git Bash, PowerShell 7, `unzip`, `zipinfo`, `sha256sum`. **No Nix, Node, pnpm, `jq` or `zip` locally.** Every verification step is tagged **[local]** or **[CI only]**. Nix and Linux/macOS behavior are [CI only]. §15: Windows AOT publish works locally through the dotnet MCP tool.
+- **Shell commands (Bash tool strips one level of backslashes, user CLAUDE.md):** write every grep alternation as `grep -E "a|b"` with no backslashes (use `-w` for whole words, `[*]` for a literal `*`); any command that needs a backslash (`\b`, `\n`, regex groups, Windows paths such as `'win\x64\ccusage.exe'`) runs through the **PowerShell** tool; files are created with Write/Edit, never heredocs; a multi-line shell script is written with Write and run with `bash <file>`; Python helpers are written with Write and run with `python -I <file>`. `<scratchpad>` below means the session scratchpad directory.
+- **Commits:** small Conventional Commits, each ending with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Scopes: `mcp`, `plugin`, `bundle`, `ci`, `release`, `deps`, `docs`, `chore`, `spec`. **Every commit message is written with Write to `<scratchpad>/commit-msg.txt` (subject, blank line, body if any, blank line, the `Co-Authored-By` line) and committed with `git commit -F <scratchpad>/commit-msg.txt`; never `git commit -m`.** **Never push** outside an answered DECISION step (Task 11b step 9, Task 14a step 12, Task 17 step 6).
 - **Version** = root `package.json` `version` (`20.0.45`); every new file carrying a version uses that string.
 - **Naming:** kebab-case parameters equal to the long flag without `--`. Tools `daily, weekly, monthly, session, blocks, statusline, list-sources, report`; prompt `ccusage`; executable `ccusage-mcp`; env `CCUSAGE_ENGINE`, `CCUSAGE_MCP_TIMEOUT_SECONDS` (default `120`).
 - **Order:** tasks in the listed order; each leaves the repo building and tests green. `apps/ccusage` is deleted (Task 14a) only after fixtures were copied (Task 8) and CI stopped referencing it (Tasks 11–12).
@@ -73,10 +74,10 @@ dotnet/Ccusage.Mcp.slnx
 dotnet/AGENTS.md
 dotnet/packaging/{manifest.template.json,launch.sh,assemble-bundle.sh,verify-bundle.sh,bundle-smoke.ps1}
 dotnet/src/Ccusage.Mcp/Ccusage.Mcp.csproj         AssemblyName ccusage-mcp, PublishAot, embeds the two JSON files by link
-dotnet/src/Ccusage.Mcp/{Program.cs,ServerVersion.cs}
+dotnet/src/Ccusage.Mcp/{Program.cs,ServerVersion.cs,VersionCommand.cs}
 dotnet/src/Ccusage.Mcp/Commands/{OptionKind,OptionTypeTable,CommandCatalog,CommandRequest,ValidationException,CommandValidator,CliArgsParser}.cs
 dotnet/src/Ccusage.Mcp/Engine/{EngineLocator,EngineNotFoundException,EngineInvocation,EngineResult,EngineRunner}.cs
-dotnet/src/Ccusage.Mcp/Tools/{ToolDefinitions,ToolArguments,ToolHandlers}.cs
+dotnet/src/Ccusage.Mcp/Tools/{ToolDefinitions,ToolArguments,EngineCall,ToolHandlers}.cs
 dotnet/src/Ccusage.Mcp/Prompts/{PromptDefinitions,PromptHandlers}.cs
 dotnet/src/Ccusage.Mcp/Json/McpJsonContext.cs
 dotnet/tests/Ccusage.Mcp.Tests/{Ccusage.Mcp.Tests.csproj,TestPaths.cs,VersionTests.cs}
@@ -122,7 +123,7 @@ Expected: `dotnet build phase0/spike -c Release` → 0 warnings. Write down, for
 - [ ] **Step 3: Publish the spike as AOT (Q6)** [local, or CI-only per step 1]
 
 `dotnet publish phase0/spike -r win-x64 -c Release 2>&1 | tee phase0/publish.log`.
-Expected: exit 0 and `grep -c "warning IL" phase0/publish.log` prints `0`. Q6 = yes. Then `echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}' | phase0/spike/bin/Release/net10.0/win-x64/publish/ccusage-mcp.exe` prints one JSON-RPC result on stdout.
+Expected: exit 0 and `grep -c "warning IL" phase0/publish.log` prints `0`. Q6 = yes. Then `echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}' | phase0/spike/bin/Release/net10.0/win-x64/publish/ccusage-mcp.exe` prints one JSON-RPC result on stdout. (Executed. §15 environment notes record that this shell publish fails at the link step and that a single piped request prints nothing; later tasks publish through the dotnet MCP tool and hold stdin open.)
 
 - [ ] **Step 4: DECISION (only if step 3 reported IL warnings or failed)**
 
@@ -168,7 +169,7 @@ Expected observations recorded in §15: **Q1** = `ccusage-mcp.exe` ran (so `plat
 
 - [ ] **Step 11: Record Q4 as pending CI**
 
-Write in §15: "Q4: not observable on Windows. The zip stores unix modes (`zip -X`) and `launch.sh` restores `+x`; Task 11b's `bundle-smoke` jobs on ubuntu-latest and macos-latest assert the exec bits after extraction (**pending CI**). Claude Code's own extractor remains unverified until the plugin is installed on Linux/macOS."
+Write in §15: "Q4: not observable on Windows. The bundle is zipped with Info-ZIP `zip -X -r` after `chmod +x` (Info-ZIP stores unix modes by default; `-X` only drops the extra uid/gid fields; never Python `zipfile`/`Compress-Archive`) and `launch.sh` restores `+x`; Task 11b's `bundle-smoke` jobs on ubuntu-latest and macos-latest assert the exec bits after extraction (**pending CI**). Claude Code's own extractor remains unverified until the plugin is installed on Linux/macOS."
 Expected: the sentence is present in the §15 table row 4.
 
 - [ ] **Step 12: Record Q5 (runtime source + pending CI)**
@@ -203,9 +204,17 @@ Expected: every row filled; every fallback marked **REQUIRES HUMAN APPROVAL**.
 
 - [ ] **Step 14: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+docs(spec): add Phase 0 verification findings
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add docs/superpowers/specs/2026-10-29-csharp-aot-mcp-server-design.md
-git commit -m "docs(spec): add Phase 0 verification findings" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 - [ ] **Step 15: DECISION — Phase 0 gate**
@@ -343,7 +352,7 @@ Run: `dotnet run --project dotnet/src/Ccusage.Mcp -- --version`. Expected: `ccus
 
 - [ ] **Step 16: Write `dotnet/AGENTS.md`**
 
-Six sections: layout (one line per file-map directory); commands (`dotnet build dotnet/Ccusage.Mcp.slnx`, `dotnet test dotnet/Ccusage.Mcp.slnx`, `dotnet publish dotnet/src/Ccusage.Mcp -c Release -r <rid>`); "catalog data comes from `rust/crates/ccusage-cli-parser/src/*.json` by link; never copy it"; the FakeEngine protocol; e2e env vars `CCUSAGE_MCP_E2E_SERVER` / `CCUSAGE_ENGINE` (Task 8); snapshot update `UPDATE_SNAPSHOTS=1` (Task 7a); AOT rules (no reflection serialization; `[JsonSerializable]` only; zero IL warnings).
+Six sections: layout (one line per file-map directory); commands (`dotnet build dotnet/Ccusage.Mcp.slnx`, `dotnet test dotnet/Ccusage.Mcp.slnx`, `dotnet publish dotnet/src/Ccusage.Mcp -c Release -r <rid>`, noting that agents publish through the dotnet MCP `Publish` action because the shell link step fails, §15); "catalog data comes from `rust/crates/ccusage-cli-parser/src/*.json` by link; never copy it"; the FakeEngine protocol; e2e env vars `CCUSAGE_MCP_E2E_SERVER` / `CCUSAGE_ENGINE` (Task 8); snapshot update `UPDATE_SNAPSHOTS=1` (Task 7a); AOT rules (no reflection serialization; `[JsonSerializable]` only; zero IL warnings).
 Expected: the file has those sections.
 
 - [ ] **Step 17: Append to `.gitignore`**
@@ -353,9 +362,17 @@ Expected: `git status --short` lists no `bin/` or `obj/` path.
 
 - [ ] **Step 18: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): scaffold dotnet solution, server stub, tests and FakeEngine
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet .gitignore
-git commit -m "feat(mcp): scaffold dotnet solution, server stub, tests and FakeEngine" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -398,7 +415,7 @@ public static class OptionTypeTable
 }
 ```
 
-Derivation rules: a page is every `pages[]` entry with an `options` key; `path` of length 1 → source `all`, except `blocks`/`statusline` → source `claude`; length 2 → `(source, report)`; duplicates (`claude/blocks` vs root `blocks`) keep the first seen. Sources = `pages[]` entries with a `commands` key in file order, `all` synthesized first (reports `daily, weekly, monthly, session`). Page options: `options` is either a `combinedOptions` key (list of group names) or a group name in `cli-help.json`; concatenate the groups' entries; drop `NeverExposed` names and `--no-<x>` entries; dedupe by name keeping the first. Flags: `"-s, --since <since>"` → alias `s`, name `since`, TakesValue, not optional; `"--speed [speed]"` → optional; `"--by-agent"` → no value. Kind from `Entries[name]`; EnumValues from JSON `choices` when present, else from the table.
+Derivation rules: a page is every `pages[]` entry with an `options` key; `path` of length 1 → source `all`, except `blocks`/`statusline` → source `claude`; length 2 → `(source, report)`; duplicates (`claude/blocks` vs root `blocks`) keep the first seen. Sources = `pages[]` entries with a `commands` key in file order, `all` synthesized first (reports `daily, weekly, monthly, session`). `Reports` (catalog-wide) is defined, not derived: `daily, weekly, monthly, session, blocks, statusline` in exactly that order (the root commands come as `daily, monthly, weekly, …`, so do not take their order); Task 3's `Unknown report` message relies on it. Page options: `options` is either a `combinedOptions` key (list of group names) or a group name in `cli-help.json`; concatenate the groups' entries; drop `NeverExposed` names and the `--no-<x>` entries whose `--<x>` is also in the help (`no-offline`, `no-cache`, `no-color`); `no-cost` has no `--cost` counterpart, is a plain `Bool` and stays; dedupe by name keeping the first. Flags: `"-s, --since <since>"` → alias `s`, name `since`, TakesValue, not optional; `"--speed [speed]"` → optional; `"--by-agent"` → no value. Kind from `Entries[name]`; EnumValues from JSON `choices` when present, else from the table.
 
 `Entries` (exact): `since Date; until Date; timezone String; offline NegatableBool; cache NegatableBool; config Path; no-cost Bool; sections CsvEnum [daily,weekly,monthly,session]; by-agent Bool; last Int; id String; start-of-week Enum; mode Enum; order Enum; breakdown Bool; debug Bool; debug-samples Int; single-thread Bool; instances Bool; project String; project-aliases String; speed Enum; pi-path PathList; open-claw-path PathList; active Bool; recent Bool; token-limit IntOrMax; session-length Number; visual-burn-rate Enum; cost-source Enum; refresh-interval Int; context-low-threshold Int; context-medium-threshold Int` (`Number` for `session-length` per §16.2).
 
@@ -544,9 +561,17 @@ Run: `dotnet build dotnet/Ccusage.Mcp.slnx -c Release`. Expected: `0 Warning(s)`
 
 - [ ] **Step 11: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): derive command catalog from embedded cli-commands/cli-help json
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "feat(mcp): derive command catalog from embedded cli-commands/cli-help json" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -603,9 +628,11 @@ public sealed class CommandValidatorTests
     private static readonly CommandCatalog C = CommandCatalog.Instance;
     private static CommandRequest Req(string s, string r, params (string n, string v)[] o) => new(s, r, o.Select(x => new OptionValue(x.n, x.v)).ToList());
     private static string Error(CommandRequest req) => Assert.ThrowsExactly<ValidationException>(() => CommandValidator.ValidateAndBuildArgv(C, req)).Message;
+    private static string Head(string s, string r) => s == "all" || r is "blocks" or "statusline" ? r : s;   // first argv token per the argv rules
 
     [TestMethod] public void EveryCatalogPair_Validates()
-    { foreach (var s in C.Sources) foreach (var r in s.Reports) CommandValidator.ValidateAndBuildArgv(C, Req(s.Id, r)); }
+    { foreach (var s in C.Sources) foreach (var r in s.Reports)
+      { var argv = CommandValidator.ValidateAndBuildArgv(C, Req(s.Id, r)); Assert.AreEqual(Head(s.Id, r), argv[0], $"{s.Id} {r}"); } }
 
     [DataTestMethod]
     [DataRow("codex", "weekly", "Report 'weekly' is not available for source 'codex'. Sources with 'weekly': all, claude, opencode.")]
@@ -656,7 +683,8 @@ public sealed class CommandValidatorTests
     [DataRow("claude", "blocks", "session-length", "2.5")]
     [DataRow("all", "daily", "offline", "false")]
     [DataRow("all", "daily", "timezone", "America/New_York")]
-    public void ValidValue_Accepted(string s, string r, string n, string v) => CommandValidator.ValidateAndBuildArgv(C, Req(s, r, (n, v)));
+    public void ValidValue_Accepted(string s, string r, string n, string v) =>
+        Assert.AreEqual(Head(s, r), CommandValidator.ValidateAndBuildArgv(C, Req(s, r, (n, v)))[0]);
 }
 ```
 
@@ -716,9 +744,17 @@ Run: `dotnet build dotnet/Ccusage.Mcp.slnx -c Release`. Expected: `0 Warning(s)`
 
 - [ ] **Step 9: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): validate requests against the catalog and build engine argv
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "feat(mcp): validate requests against the catalog and build engine argv" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -737,7 +773,7 @@ git commit -m "feat(mcp): validate requests against the catalog and build engine
 - Consumes: `CommandCatalog` (`Sources`, `Reports`, `TryGetPage`, `NeverExposed`), `CommandRequest`, `OptionValue`, `ValidationException`.
 - Produces: `public static class CliArgsParser { public static IReadOnlyList<string> Tokenize(string args); public static CommandRequest Parse(CommandCatalog catalog, string args); }`
 
-Grammar: whitespace-separated tokens; a double-quoted span is one token with the quotes removed and may contain spaces; `\"` inside quotes is a literal quote; unterminated quote → `Unterminated quoted value in: {args}`. First token a source id → source (default `all`); next token a report → report (default `daily`); then flags. The page `(source, report)` must exist (else the Task 3 pair message). `--name=value` and `--name value`; `-x` short aliases resolved against **that page's** options (`-i` is `instances` on `claude daily`, `id` on `claude session`); `TakesValue && !ValueOptional` without a value → `Flag '--since' needs a value.`; `ValueOptional`: next token consumed only if it exists and does not start with `-`, else Raw = `Default` (null → `"true"`); no-value option → Raw `"true"`; `--no-<name>` for a `NegatableBool` → Raw `"false"`, for anything else → `Unknown argument '--no-<name>'.`; bare token after flags began → `Unknown argument '{tok}'.`; `NeverExposed` flags (`--json`, `-j`, `--compact`, `--color`, `--no-color`, `--help`, `-h`, `--version`, `-v`, `--all`) → `Flag '{flag}' is not available through the MCP server.`; report `statusline` (with or without `claude`) → `'statusline' needs a hook payload; use the statusline tool.`; unknown long flag → `Unknown argument '--foo'.`; empty/whitespace input → `("all","daily",[])`. Values are not validated here (Task 3 does).
+Grammar: whitespace-separated tokens; a double-quoted span is one token with the quotes removed and may contain spaces; `\"` inside quotes is a literal quote; unterminated quote → `Unterminated quoted value in: {args}`. First token a source id → source (default `all`); next token a report → report (default `daily`); then flags. The page `(source, report)` must exist (else the Task 3 pair message). `--name=value` and `--name value`; `-x` short aliases resolved against **that page's** options (`-i` is `instances` on `claude daily`, `id` on `claude session`); `TakesValue && !ValueOptional` without a value → `Flag '--since' needs a value.`; `ValueOptional`: next token consumed only if it exists and does not start with `-`, else Raw = `Default` (null → `"true"`); no-value option → Raw `"true"`; `--no-<name>` for a `NegatableBool` → Raw `"false"`, for anything else → `Unknown argument '--no-<name>'.`; bare token after flags began → `Unknown argument '{tok}'.`; `NeverExposed` flags (`--json`, `-j`, `--compact`, `--color`, `--no-color`, `--help`, `-h`, `--version`, `-v`, `--all`) → `Flag '{flag}' is not available through the MCP server.` (the parser hard-codes `-j`, `-h`, `-v`: no page lists them, because their options are dropped as `NeverExposed`); report `statusline` (with or without `claude`) → `'statusline' needs a hook payload; use the statusline tool.`; unknown long flag → `Unknown argument '--foo'.`; empty/whitespace input → `("all","daily",[])`. Values are not validated here (Task 3 does).
 
 - [ ] **Step 1: Write the failing tests** in `Commands/CliArgsParserTests.cs`
 
@@ -815,9 +851,17 @@ Run: `dotnet build dotnet/Ccusage.Mcp.slnx -c Release`. Expected: `0 Warning(s)`
 
 - [ ] **Step 7: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): parse CLI-style arguments into command requests
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "feat(mcp): parse CLI-style arguments into command requests" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -831,9 +875,9 @@ git commit -m "feat(mcp): parse CLI-style arguments into command requests" -m "C
 **Goal:** Resolve the engine path per §6.1, list every checked location on failure, and add the engine line to `--version`.
 
 **Files:**
-- Create: `dotnet/src/Ccusage.Mcp/Engine/EngineLocator.cs`, `Engine/EngineNotFoundException.cs`
+- Create: `dotnet/src/Ccusage.Mcp/Engine/EngineLocator.cs`, `Engine/EngineNotFoundException.cs`, `dotnet/src/Ccusage.Mcp/VersionCommand.cs`
 - Modify: `dotnet/src/Ccusage.Mcp/Program.cs`
-- Test: `dotnet/tests/Ccusage.Mcp.Tests/Engine/EngineLocatorTests.cs`
+- Test: `dotnet/tests/Ccusage.Mcp.Tests/Engine/EngineLocatorTests.cs`, `dotnet/tests/Ccusage.Mcp.Tests/VersionCommandTests.cs`
 
 **Interfaces (produces):**
 
@@ -847,6 +891,12 @@ public sealed class EngineLocator(Func<string, string?> getEnv, string serverDir
     public static EngineLocator Default { get; }   // Environment.GetEnvironmentVariable, AppContext.BaseDirectory, OSArchitecture (or step 7), OperatingSystem.IsWindows()
     public IReadOnlyList<string> CandidatePaths();  // resolution order
     public string Resolve();                        // first existing candidate; throws EngineNotFoundException
+}
+
+public static class VersionCommand
+{   // writes "ccusage-mcp {ServerVersion.Value}", then the engine's first non-empty --version stdout line,
+    // or "ccusage engine: unavailable ({message})" for ANY engine failure; always returns 0
+    public static int Run(TextWriter output, EngineLocator locator);
 }
 ```
 
@@ -906,10 +956,45 @@ Run: `dotnet test dotnet/Ccusage.Mcp.slnx`. Expected: CS0246 `'EngineLocator'` /
 
 Run: `dotnet test dotnet/Ccusage.Mcp.slnx`. Expected: `Failed: 0`; all `EngineLocatorTests` passed.
 
-- [ ] **Step 6: Add the engine line to `--version`** in `Program.cs`
+- [ ] **Step 6: Write the failing `--version` tests** in `VersionCommandTests.cs`
 
-After the server line: `try { var p = EngineLocator.Default.Resolve(); Process.Start(new ProcessStartInfo(p, ["--version"]) { RedirectStandardOutput = true, UseShellExecute = false })` → print the first stdout line (10 s wait) } `catch (EngineNotFoundException e) { Console.Out.WriteLine("ccusage: not found"); Console.Out.WriteLine(e.Message); }`; exit code stays 0.
-Verify [local]: `CCUSAGE_ENGINE=$(pwd)/rust/target/release/ccusage.exe dotnet run --project dotnet/src/Ccusage.Mcp -- --version` prints `ccusage-mcp 20.0.45` then `ccusage 20.0.45`; unset → second line `ccusage: not found` followed by the `Checked:` list.
+```csharp
+[TestClass]
+public sealed class VersionCommandTests
+{
+    // Locator(enginePath): new EngineLocator(k => k == "CCUSAGE_ENGINE" ? enginePath : null, Directory.CreateTempSubdirectory().FullName, Architecture.X64, OperatingSystem.IsWindows())
+    // Run(locator): var w = new StringWriter(); var exit = VersionCommand.Run(w, locator); return (exit, w.ToString().ReplaceLineEndings("\n").Split('\n'))
+
+    [TestMethod] public void Version_PrintsServerAndEngineLines()
+    { var (exit, lines) = Run(Locator(TestPaths.FakeEnginePath));
+      Assert.AreEqual(0, exit); Assert.AreEqual($"ccusage-mcp {ServerVersion.Value}", lines[0]); Assert.AreEqual("ccusage 0.0.0-fake", lines[1]); }
+
+    [TestMethod] public void Version_EngineMissing_ReportsUnavailable_ExitZero()
+    { var (exit, lines) = Run(Locator(Path.Combine(Path.GetTempPath(), "missing-engine")));
+      Assert.AreEqual(0, exit); Assert.AreEqual($"ccusage-mcp {ServerVersion.Value}", lines[0]); StringAssert.StartsWith(lines[1], "ccusage engine: unavailable (ccusage engine not found."); }
+
+    [TestMethod] public void Version_EngineCannotStart_ReportsUnavailable_ExitZero()
+    { var bogus = Path.Combine(Directory.CreateTempSubdirectory().FullName, OperatingSystem.IsWindows() ? "ccusage.exe" : "ccusage"); File.WriteAllText(bogus, "");   // exists, not executable
+      var (exit, lines) = Run(Locator(bogus));
+      Assert.AreEqual(0, exit); Assert.AreEqual($"ccusage-mcp {ServerVersion.Value}", lines[0]); StringAssert.StartsWith(lines[1], "ccusage engine: unavailable ("); }
+}
+```
+
+- [ ] **Step 6a: Run the tests to verify they fail**
+
+Run: `dotnet test dotnet/Ccusage.Mcp.slnx`. Expected: CS0103 `The name 'VersionCommand' does not exist`.
+
+- [ ] **Step 6b: Implement `VersionCommand.Run` and call it from `Program.Main`**
+
+`VersionCommand.cs`: write the server line; then `try { var p = locator.Resolve(); start new ProcessStartInfo(p, ["--version"]) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false }`, read stdout asynchronously, wait up to 10 s (not exited → kill it and fail with `ccusage --version did not exit within 10 s`; no non-empty stdout line → fail with `ccusage --version printed no version`), print the first non-empty stdout line `}` `catch (Exception e)` — any failure, `EngineNotFoundException` included — `→ output.WriteLine($"ccusage engine: unavailable ({e.Message})")`; return 0. `Program.Main`: `--version` present → `return VersionCommand.Run(Console.Out, EngineLocator.Default);`.
+
+- [ ] **Step 6c: Run the tests to verify they pass**
+
+Run: `dotnet test dotnet/Ccusage.Mcp.slnx`. Expected: `Failed: 0`; all `VersionCommandTests` passed.
+
+- [ ] **Step 6d: Verify `--version` against the real engine** [local]
+
+Run: `CCUSAGE_ENGINE=$(pwd)/rust/target/release/ccusage.exe dotnet run --project dotnet/src/Ccusage.Mcp -- --version`. Expected: `ccusage-mcp 20.0.45` then `ccusage 20.0.45`; with `CCUSAGE_ENGINE` unset (and no engine next to the server or on `PATH`) the second line starts with `ccusage engine: unavailable (ccusage engine not found.` and the exit code is 0.
 
 - [ ] **Step 7: Q5 fallback (only if §15 row 5 says `OSArchitecture` is unreliable)**
 
@@ -922,9 +1007,17 @@ Run: `dotnet build dotnet/Ccusage.Mcp.slnx -c Release`. Expected: `0 Warning(s)`
 
 - [ ] **Step 9: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): locate the ccusage engine by env, server dir, arch folder and PATH
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "feat(mcp): locate the ccusage engine by env, server dir, arch folder and PATH" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -942,16 +1035,18 @@ git commit -m "feat(mcp): locate the ccusage engine by env, server dir, arch fol
 **Interfaces (produces):**
 
 ```csharp
-public sealed record EngineInvocation(string EnginePath, IReadOnlyList<string> Argv, string? Stdin);
+public sealed record EngineInvocation(string EnginePath, IReadOnlyList<string> Argv, string? Stdin,
+    IReadOnlyDictionary<string, string?>? Environment = null);   // per-run overrides; a null value removes the variable
 public sealed record EngineResult(int ExitCode, string Stdout, string Stderr, bool TimedOut);
 public sealed class EngineRunner(TimeSpan timeout, Action<string> logWarning)
 {
-    public static TimeSpan TimeoutFromEnvironment(Func<string, string?> getEnv, Action<string> logWarning); // CCUSAGE_MCP_TIMEOUT_SECONDS; default 120; invalid or <= 0 -> warn once, 120
+    public static TimeSpan TimeoutFromEnvironment(Func<string, string?> getEnv, Action<string> logWarning); // CCUSAGE_MCP_TIMEOUT_SECONDS; default 120; unset or "" -> 120, no warning; invalid or <= 0 -> warn once, 120
+    public TimeSpan Timeout { get; }                 // the configured timeout (Task 7b's "timed out after {n} s")
     public Task<EngineResult> RunAsync(EngineInvocation invocation, CancellationToken cancellationToken);
 }
 ```
 
-Behavior: `ProcessStartInfo { FileName = EnginePath, UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = Stdin is not null, StandardOutputEncoding = UTF8, StandardErrorEncoding = UTF8 }`, `ArgumentList` from `Argv`, environment inherited plus `NO_COLOR=1`. Start both `ReadToEndAsync` before writing stdin; write then close stdin. Linked CTS = caller token + `CancelAfter(timeout)`; on expiry → `Kill(entireProcessTree: true)`, await exit, `TimedOut = true`; on caller cancellation → kill, then rethrow `OperationCanceledException`. Warning text: `CCUSAGE_MCP_TIMEOUT_SECONDS='{v}' is not a positive number; using 120.`
+Behavior: `ProcessStartInfo { FileName = EnginePath, UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = Stdin is not null, StandardOutputEncoding = UTF8, StandardErrorEncoding = UTF8 }`, `ArgumentList` from `Argv`, environment inherited, then `NO_COLOR=1`, then each `Environment` entry applied (null removes). Start both `ReadToEndAsync` before writing stdin; write then close stdin. Linked CTS = caller token + `CancelAfter(timeout)`; on expiry → `Kill(entireProcessTree: true)`, await exit, `TimedOut = true`; on caller cancellation → kill, then rethrow `OperationCanceledException`. Warning text: `CCUSAGE_MCP_TIMEOUT_SECONDS='{v}' is not a positive number; using 120.` `RunAsync` never logs on the success path and never writes to the server's own stdout (the MCP channel) or stderr (Claude Code records every stderr line as `[ERROR]`); `logWarning` is for genuine warnings only.
 
 - [ ] **Step 1: Write the failing tests** in `Engine/EngineRunnerTests.cs`
 
@@ -959,7 +1054,8 @@ Behavior: `ProcessStartInfo { FileName = EnginePath, UseShellExecute = false, Cr
 [TestClass]
 public sealed class EngineRunnerTests
 {
-    // Run(argv, stdin = null, timeoutSeconds = 10, ct = default): new EngineRunner(TimeSpan.FromSeconds(timeoutSeconds), _ => { }).RunAsync(new(TestPaths.FakeEnginePath, argv, stdin), ct)
+    // Run(argv, stdin = null, timeoutSeconds = 10, ct = default, Dictionary<string, string?>? env = null):
+    //     new EngineRunner(TimeSpan.FromSeconds(timeoutSeconds), _ => { }).RunAsync(new(TestPaths.FakeEnginePath, argv, stdin, env), ct)
     // Echo(result): JsonDocument.Parse(result.Stdout).RootElement
 
     [TestMethod] public async Task RunAsync_EchoesArgvAndExitZero()
@@ -974,6 +1070,12 @@ public sealed class EngineRunnerTests
     { var r = await Run(["statusline"], "{\"session_id\":\"x\"}"); Assert.AreEqual("{\"session_id\":\"x\"}", Echo(r).GetProperty("stdin").GetString()); }
 
     [TestMethod] public async Task RunAsync_SetsNoColor() => Assert.AreEqual("1", Echo(await Run(["daily"])).GetProperty("noColor").GetString());
+
+    [TestMethod] public async Task RunAsync_AppliesEnvironmentOverrides()
+    { Assert.AreEqual("x", Echo(await Run(["daily"], env: new() { ["NO_COLOR"] = "x" })).GetProperty("noColor").GetString());
+      Assert.AreEqual(JsonValueKind.Null, Echo(await Run(["daily"], env: new() { ["NO_COLOR"] = null })).GetProperty("noColor").ValueKind); }
+
+    [TestMethod] public void Timeout_IsExposed() => Assert.AreEqual(TimeSpan.FromSeconds(7), new EngineRunner(TimeSpan.FromSeconds(7), _ => { }).Timeout);
 
     [TestMethod] public async Task RunAsync_CapturesStderr()
     { var r = await Run(["daily", "--fake-stderr=warn: pricing"]); Assert.AreEqual(0, r.ExitCode); StringAssert.Contains(r.Stderr, "warn: pricing"); }
@@ -1021,9 +1123,17 @@ Run: `dotnet build dotnet/Ccusage.Mcp.slnx -c Release`. Expected: `0 Warning(s)`
 
 - [ ] **Step 8: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): run the engine with concurrent capture, stdin, timeout and cancellation
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "feat(mcp): run the engine with concurrent capture, stdin, timeout and cancellation" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1053,7 +1163,7 @@ public static class PromptDefinitions { public static Prompt Ccusage { get; } }
 ```
 
 Schema rules (every schema `"type":"object"`, `"additionalProperties":false`, `properties` in catalog order):
-- `daily|weekly|monthly|session`: `source` first — `{"type":"string","enum":["all",<sources with that report>],"default":"all","description":"Data source. Default: all."}`; then `UnionOptions(report)` mapped: Bool/NegatableBool → `{"type":"boolean"}`; Enum → `{"type":"string","enum":[...]}`; CsvEnum → `{"type":"string"}` + description suffix ` Comma-separated; each item one of: a, b, c.`; Date → `{"type":"string","pattern":"^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$"}`; Int → `{"type":"integer","minimum":1}` for `last`, `"minimum":0` otherwise; Number → `{"type":"number","minimum":0}`; IntOrMax → `{"type":"string","pattern":"^([1-9]\\d*|max)$"}`; String/Path/PathList → `{"type":"string"}`. Description = help description + ` Default: {Default}.` when non-null + ` Applies to: a, b.` (`SourcesAccepting`) unless every source with the report accepts it.
+- `daily|weekly|monthly|session`: `source` first — `{"type":"string","enum":<SourcesWithReport(report), which already starts with "all">,"default":"all","description":"Data source. Default: all."}`; then `UnionOptions(report)` mapped: Bool/NegatableBool → `{"type":"boolean"}`; Enum → `{"type":"string","enum":[...]}`; CsvEnum → `{"type":"string"}` + description suffix ` Comma-separated; each item one of: a, b, c.`; Date → `{"type":"string","pattern":"^(\\d{4}-\\d{2}-\\d{2}|\\d{8})$"}`; Int → `{"type":"integer","minimum":1}` for `last`, `"minimum":0` otherwise; Number → `{"type":"number","minimum":0}`; IntOrMax → `{"type":"string","pattern":"^([1-9]\\d*|max)$"}`; String/Path/PathList → `{"type":"string"}`. Description = help description + ` Default: {Default}.` when non-null + ` Applies to: a, b.` (`SourcesAccepting`) unless every source with the report accepts it.
 - `blocks`: options of `(claude, blocks)`, no `source`. `statusline`: `hook-input` first — `{"type":"object","description":"Claude Code status-line hook payload (session_id, transcript_path, cwd, model, workspace, version, cost, context_window). Written to the engine's stdin unchanged."}`, `required:["hook-input"]`, then `(claude, statusline)` options. `list-sources`: `{"type":"object","properties":{},"additionalProperties":false}`. `report`: `args` `{"type":"string","description":"CLI-style arguments as typed after `ccusage`, e.g. \"codex daily --since 2026-10-01\", \"weekly --last 2 --by-agent\", \"\" (= daily, all sources)."}`, `required:["args"]`.
 - Descriptions: `daily` `Token usage and cost grouped by day. Default source: all detected sources. Long ranges produce large JSON; prefer since/until or last.`; `weekly`/`monthly`/`session` same with `by week` / `by month` / `by session`; `blocks` `Claude Code usage grouped by 5-hour billing blocks (Claude only).`; `statusline` `Claude Code status line text for a hook payload (Claude only; returns plain text).`; `list-sources` `List supported sources, their reports, and the server/engine versions and engine path.`; `report` `Run any ccusage report from CLI-style arguments; same validation as the typed tools.`
 - Annotations: `ReadOnlyHint = true`, `DestructiveHint = false`, `IdempotentHint = true`, `OpenWorldHint = null`.
@@ -1150,9 +1260,17 @@ Run: `dotnet build dotnet/Ccusage.Mcp.slnx -c Release`. Expected: `0 Warning(s)`
 
 - [ ] **Step 10: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): generate tool and prompt definitions with schema snapshots
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "feat(mcp): generate tool and prompt definitions with schema snapshots" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1166,7 +1284,7 @@ git commit -m "feat(mcp): generate tool and prompt definitions with schema snaps
 **Goal:** `tools/list`, `tools/call`, `prompts/list`, `prompts/get` over stdio; Native AOT publish with zero trim/AOT warnings.
 
 **Files:**
-- Create: `dotnet/src/Ccusage.Mcp/Tools/ToolArguments.cs`, `Tools/ToolHandlers.cs`, `dotnet/src/Ccusage.Mcp/Prompts/PromptHandlers.cs`
+- Create: `dotnet/src/Ccusage.Mcp/Tools/ToolArguments.cs`, `Tools/EngineCall.cs`, `Tools/ToolHandlers.cs`, `dotnet/src/Ccusage.Mcp/Prompts/PromptHandlers.cs`
 - Modify: `dotnet/src/Ccusage.Mcp/Program.cs`, `Json/McpJsonContext.cs` (add `ListSourcesResult`, `SourceInfo`), `dotnet/tests/FakeEngine/Program.cs`, `dotnet/AGENTS.md`
 - Test: `dotnet/tests/Ccusage.Mcp.Tests/Tools/ToolHandlersTests.cs`, `Prompts/PromptHandlersTests.cs`
 
@@ -1176,16 +1294,22 @@ git commit -m "feat(mcp): generate tool and prompt definitions with schema snaps
 
 ```csharp
 public static class ToolArguments
-{   public static CommandRequest FromTyped(CommandCatalog catalog, string tool, IReadOnlyDictionary<string, JsonElement>? args); } // throws ValidationException
+{   public static CommandRequest FromTyped(CommandCatalog catalog, string tool, IDictionary<string, JsonElement>? args); } // throws ValidationException
+internal readonly record struct EngineCallResult(string? Stdout, string? Stderr, string? Error);   // Error non-null = failure (text returned verbatim)
+internal static class EngineCall
+{   // the ONE validate -> locate -> run -> map-errors path, shared by ToolHandlers and PromptHandlers
+    public static Task<EngineCallResult> ExecuteAsync(CommandCatalog catalog, EngineLocator locator, EngineRunner runner,
+        Func<CommandRequest> request, CancellationToken ct);
+}
 public sealed class ToolHandlers(CommandCatalog catalog, EngineLocator locator, EngineRunner runner)
 {
     public ValueTask<ListToolsResult> ListAsync(CancellationToken ct);
-    public ValueTask<CallToolResult> CallAsync(string name, IReadOnlyDictionary<string, JsonElement>? args, CancellationToken ct);
+    public ValueTask<CallToolResult> CallAsync(string name, IDictionary<string, JsonElement>? args, CancellationToken ct);
 }
 public sealed class PromptHandlers(CommandCatalog catalog, EngineLocator locator, EngineRunner runner)
 {
     public ValueTask<ListPromptsResult> ListAsync(CancellationToken ct);
-    public ValueTask<GetPromptResult> GetAsync(string name, IReadOnlyDictionary<string, JsonElement>? args, CancellationToken ct);
+    public ValueTask<GetPromptResult> GetAsync(string name, IDictionary<string, JsonElement>? args, CancellationToken ct);
 }
 public sealed record SourceInfo(string Id, string DisplayName, IReadOnlyList<string> Reports);                    // JSON names id, display-name, reports
 public sealed record ListSourcesResult(string ServerVersion, string? EngineVersion, string? EnginePath, string? EngineError, IReadOnlyList<SourceInfo> Sources); // server-version, engine-version, engine-path, engine-error (omitted when null), sources
@@ -1193,9 +1317,11 @@ public sealed record ListSourcesResult(string ServerVersion, string? EngineVersi
 
 `FromTyped`: unknown tool → `Unknown tool '{name}'.`; `source` string (default `all`) for the four report tools; `blocks`/`statusline` → source `claude`; property mapping: JSON `true/false` → `"true"/"false"`, number → `GetRawText()`, string → itself, `null` → ignored, other → `Parameter '{p}' has an unsupported JSON type ({kind}).`; `hook-input`: missing → `Parameter 'hook-input' is required.`, non-object → `Parameter 'hook-input' must be a JSON object.`, object → `Stdin = GetRawText()`; unknown properties are passed to `CommandValidator` (which rejects them with the valid list).
 
-`CallAsync`: success → `Content[0] = TextContentBlock(Stdout)`; `Stderr` non-empty → `Content[1] = TextContentBlock("stderr:\n" + Stderr)`; `ValidationException` → `IsError = true`, text = message (engine not started); `EngineNotFoundException` → `IsError`, its message; non-zero exit → `IsError`, `ccusage exited with code {n}.\n{Stderr}`; timeout → `IsError`, `ccusage timed out after {seconds} s.\n{Stderr}`; `list-sources` → indented `ListSourcesResult` JSON (`engine-version` = `--version` stdout minus `ccusage ` prefix; engine missing → `engine-version`/`engine-path` null, `engine-error` = exception message, not `IsError`); `report` → `CliArgsParser.Parse` then the same path.
+`EngineCall.ExecuteAsync` (the only place that runs a report; no private run helper in either handler class): calls `request()` (which may throw `ValidationException` from `ToolArguments.FromTyped` or `CliArgsParser.Parse`), `CommandValidator.ValidateAndBuildArgv`, `locator.Resolve()`, `runner.RunAsync`, and maps every failure to `Error`: `ValidationException` → its message (engine not started); `EngineNotFoundException` → its message; non-zero exit → `ccusage exited with code {n}.\n{Stderr}`; timeout → `ccusage timed out after {(int)runner.Timeout.TotalSeconds} s.\n{Stderr}`. Caller cancellation (`OperationCanceledException`) propagates.
 
-`GetAsync("ccusage")`: `args.args` (missing → `""`); success message role `user`, text exactly `ccusage {rendered}\n\n```json\n{stdout}\n```\n\nPresent this report as a readable table with totals, and call out the main cost drivers (the models, days, or sessions with the highest cost).` where `{rendered}` is the trimmed input, or `daily` when empty; error → `ccusage {rendered} failed:\n\n{error text}`; other prompt names → `McpException("Unknown prompt '{name}'.")`.
+`CallAsync`: typed tools → `EngineCall.ExecuteAsync(…, () => ToolArguments.FromTyped(catalog, name, args), ct)`; `report` → `EngineCall.ExecuteAsync(…, () => CliArgsParser.Parse(catalog, args.args), ct)`. Success → `Content[0] = TextContentBlock(Stdout)`; `Stderr` non-empty → `Content[1] = TextContentBlock("stderr:\n" + Stderr)`; `Error` → `IsError = true`, `Content[0]` = the error text. `list-sources` → indented `ListSourcesResult` JSON (`engine-version` = `--version` stdout minus `ccusage ` prefix; engine missing → `engine-version`/`engine-path` null, `engine-error` = exception message; engine found but `--version` fails, times out or cannot start → `engine-path` set, `engine-version` null, `engine-error` = the failure text; never `IsError`).
+
+`GetAsync("ccusage")`: `args.args` (missing → `""`) → `EngineCall.ExecuteAsync(…, () => CliArgsParser.Parse(catalog, args), ct)`; success message role `user`, text exactly `ccusage {rendered}\n\n```json\n{stdout}\n```\n\nPresent this report as a readable table with totals, and call out the main cost drivers (the models, days, or sessions with the highest cost).` where `{rendered}` is the trimmed input, or `daily` when empty; error → `ccusage {rendered} failed:\n\n{error text}`; other prompt names → `McpException("Unknown prompt '{name}'.")`.
 
 FakeEngine additions (document in `dotnet/AGENTS.md`): argv contains `--debug` → also writes `debug: fake` to stderr; `--project` followed by `fail` → exit 4, stderr `boom`; `--project` followed by `plain` → stdout `not json\n`; `--id` followed by `hang` → hang after stdout.
 
@@ -1306,13 +1432,15 @@ Run: `dotnet test dotnet/Ccusage.Mcp.slnx`. Expected: CS0246 `'ToolHandlers'` / 
 
 - [ ] **Step 6: Implement `ToolArguments.FromTyped`** in `Tools/ToolArguments.cs`.
 
-- [ ] **Step 7: Implement `ToolHandlers`** in `Tools/ToolHandlers.cs` — `ListAsync` returns `ToolDefinitions.Build(catalog)`; `CallAsync` per the rules; a private `RunAsync(CommandRequest, ct)` shared with `PromptHandlers` via an `internal static` helper `EngineCall.ExecuteAsync(catalog, locator, runner, request, ct) → (string? text, string? error)` in the same file.
+- [ ] **Step 6a: Implement `EngineCall.ExecuteAsync`** in `Tools/EngineCall.cs` — validate → locate → run → map errors exactly as above; the timeout text uses `runner.Timeout`.
 
-- [ ] **Step 8: Implement `PromptHandlers`** in `Prompts/PromptHandlers.cs`.
+- [ ] **Step 7: Implement `ToolHandlers`** in `Tools/ToolHandlers.cs` — `ListAsync` returns `ToolDefinitions.Build(catalog)`; `CallAsync` per the rules, every report run through `EngineCall.ExecuteAsync` (no private `RunAsync`).
+
+- [ ] **Step 8: Implement `PromptHandlers`** in `Prompts/PromptHandlers.cs` — `GetAsync` runs through `EngineCall.ExecuteAsync` too.
 
 - [ ] **Step 9: Wire `Program.cs`**
 
-Keep the `--version` branch. Then `var builder = Host.CreateApplicationBuilder(args); builder.Logging.ClearProviders(); builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);` register singletons `CommandCatalog.Instance`, `EngineLocator.Default`, `new EngineRunner(EngineRunner.TimeoutFromEnvironment(Environment.GetEnvironmentVariable, Console.Error.WriteLine), Console.Error.WriteLine)`, `ToolHandlers`, `PromptHandlers`; `builder.Services.AddMcpServer(o => o.ServerInfo = new() { Name = "ccusage", Version = ServerVersion.Value }).WithStdioServerTransport()` plus the four handler registrations from §15 row 6 delegating to `ToolHandlers.ListAsync/CallAsync` and `PromptHandlers.ListAsync/GetAsync` using `request.Params?.Name` and `request.Params?.Arguments`; `await builder.Build().RunAsync(); return 0;`.
+Keep the `--version` branch. Then `var builder = Host.CreateApplicationBuilder(args); builder.Logging.ClearProviders(); builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace); builder.Logging.SetMinimumLevel(LogLevel.Warning);` (only warnings and above reach stderr, which Claude Code logs as `[ERROR]`; §15) register singletons `CommandCatalog.Instance`, `EngineLocator.Default`, `new EngineRunner(EngineRunner.TimeoutFromEnvironment(Environment.GetEnvironmentVariable, Console.Error.WriteLine), Console.Error.WriteLine)`, `ToolHandlers`, `PromptHandlers`; `builder.Services.AddMcpServer(o => o.ServerInfo = new() { Name = "ccusage", Version = ServerVersion.Value }).WithStdioServerTransport()` plus the four handler registrations from §15 row 6 delegating to `ToolHandlers.ListAsync/CallAsync` and `PromptHandlers.ListAsync/GetAsync` using `request.Params?.Name` and `request.Params?.Arguments`; `await builder.Build().RunAsync(); return 0;`.
 
 - [ ] **Step 10: Run the tests to verify they pass**
 
@@ -1322,19 +1450,38 @@ Run: `dotnet test dotnet/Ccusage.Mcp.slnx`. Expected: `Failed: 0`; all `ToolHand
 
 Run: `dotnet build dotnet/Ccusage.Mcp.slnx -c Release`. Expected: `0 Warning(s)`.
 
-- [ ] **Step 12: AOT publish** [local if §15 says AOT works locally; otherwise CI only in Task 11b]
+- [ ] **Step 12: AOT publish** [local, via the dotnet MCP tool (§15: AOT works locally only through it)]
 
-Run: `dotnet publish dotnet/src/Ccusage.Mcp -c Release -r win-x64 2>&1 | tee publish.log; grep -c "warning IL" publish.log`. Expected: `0`; `dotnet/src/Ccusage.Mcp/bin/Release/net10.0/win-x64/publish/ccusage-mcp.exe` exists. Delete `publish.log`.
+Run: `mcp__dotnet__dotnet_project` `Publish` with project `dotnet/src/Ccusage.Mcp`, runtime `win-x64`, configuration `Release`. Expected: success; the tool output contains no `warning IL`; `dotnet/src/Ccusage.Mcp/bin/Release/net10.0/win-x64/publish/ccusage-mcp.exe` exists.
 
-- [ ] **Step 13: Stdio smoke** [local, same condition]
+- [ ] **Step 13: Stdio smoke** [local, PowerShell tool]
 
-Run: `printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}' | dotnet/src/Ccusage.Mcp/bin/Release/net10.0/win-x64/publish/ccusage-mcp.exe`. Expected: exactly one line on stdout, a JSON-RPC result with `"serverInfo":{"name":"ccusage","version":"20.0.45"}`.
+Run through the **PowerShell** tool (stdin stays open until the reply is read; §15 environment notes):
+
+```powershell
+$psi = [System.Diagnostics.ProcessStartInfo]::new((Resolve-Path 'dotnet/src/Ccusage.Mcp/bin/Release/net10.0/win-x64/publish/ccusage-mcp.exe').Path)
+$psi.RedirectStandardInput = $true; $psi.RedirectStandardOutput = $true; $psi.UseShellExecute = $false
+$p = [System.Diagnostics.Process]::Start($psi)
+$p.StandardInput.WriteLine('{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}'); $p.StandardInput.Flush()
+$t = $p.StandardOutput.ReadLineAsync(); if (-not $t.Wait(10000)) { $p.Kill(); throw 'no reply within 10 s' }
+$p.StandardInput.Close(); [void]$p.WaitForExit(5000); $t.Result
+```
+
+Expected: the printed line is a JSON-RPC result with `"serverInfo":{"name":"ccusage","version":"20.0.45"}`.
 
 - [ ] **Step 14: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(mcp): wire MCP tool and prompt handlers over stdio with AOT publish
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "feat(mcp): wire MCP tool and prompt handlers over stdio with AOT publish" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1350,8 +1497,8 @@ git commit -m "feat(mcp): wire MCP tool and prompt handlers over stdio with AOT 
 - Modify: `dotnet/tests/Ccusage.Mcp.Tests/Ccusage.Mcp.Tests.csproj` (`AssemblyMetadata` `FixturesDir` = `$(MSBuildThisFileDirectory)../fixtures`), `dotnet/AGENTS.md`
 
 **Interfaces:**
-- Consumes: the published server (env `CCUSAGE_MCP_E2E_SERVER`), the engine (env `CCUSAGE_ENGINE`), the SDK client (`McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions { Command, EnvironmentVariables }))`; names per §15 row 6), `CommandValidator`, `CliArgsParser`, `EngineRunner`.
-- Produces: `internal static class E2eEnvironment { public static E2eContext RequireOrInconclusive(); }` with `record E2eContext(string ServerPath, string EnginePath, string FixturesDir, Dictionary<string, string?> Env)` — `Assert.Inconclusive("Set CCUSAGE_MCP_E2E_SERVER and CCUSAGE_ENGINE to run e2e tests.")` when either variable is unset. `Env` = `CLAUDE_CONFIG_DIR=<fixtures>/claude`, `CODEX_HOME=<fixtures>/codex`, `HOME` and `USERPROFILE` = a fresh temp dir, `NO_COLOR=1`, `LOG_LEVEL=0`, `CCUSAGE_ENGINE=<EnginePath>` — applied to both the server process and direct engine runs.
+- Consumes: the published server (env `CCUSAGE_MCP_E2E_SERVER`), the engine (env `CCUSAGE_ENGINE`), the SDK 2.3.0 client API (`McpClient.CreateAsync(new StdioClientTransport(new StdioClientTransportOptions { Command, EnvironmentVariables }))`, `CallToolAsync`, `ListToolsAsync`, `GetPromptAsync`, `ServerInfo`; §15 row 6 records only the server-side names), `CommandValidator`, `CliArgsParser`, `EngineRunner`.
+- Produces: `internal static class E2eEnvironment { public static E2eContext RequireOrInconclusive(); }` with `record E2eContext(string ServerPath, string EnginePath, string FixturesDir, Dictionary<string, string?> Env)` — `Assert.Inconclusive("Set CCUSAGE_MCP_E2E_SERVER and CCUSAGE_ENGINE to run e2e tests.")` when either variable is unset. `Env` = `CLAUDE_CONFIG_DIR=<fixtures>/claude`, `CODEX_HOME=<fixtures>/codex`, `HOME` and `USERPROFILE` = a fresh temp dir, `NO_COLOR=1`, `LOG_LEVEL=0`, `CCUSAGE_ENGINE=<EnginePath>` — applied to both the server process (`StdioClientTransportOptions.EnvironmentVariables`) and direct engine runs (`EngineInvocation.Environment`, Task 6); the test process environment is never mutated.
 
 - [ ] **Step 1: Copy the fixtures**
 
@@ -1366,9 +1513,17 @@ Expected: `find dotnet/tests/fixtures -type f | wc -l` prints `9`; `diff -r apps
 
 - [ ] **Step 2: Commit the copy**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+test(mcp): copy engine fixtures for end-to-end tests
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet/tests/fixtures
-git commit -m "test(mcp): copy engine fixtures for end-to-end tests" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 - [ ] **Step 3: Write the failing e2e tests** in `E2E/EndToEndTests.cs`
@@ -1379,7 +1534,7 @@ public sealed class EndToEndTests
 {
     // Ctx: E2eEnvironment.RequireOrInconclusive() in [TestInitialize]
     // Client(): McpClient over StdioClientTransport { Command = Ctx.ServerPath, EnvironmentVariables = Ctx.Env }
-    // Direct(argv, stdin = null): EngineRunner(120 s).RunAsync(new(Ctx.EnginePath, argv, stdin)) with Ctx.Env applied to the process
+    // Direct(argv, stdin = null): new EngineRunner(TimeSpan.FromSeconds(120), _ => { }).RunAsync(new(Ctx.EnginePath, argv, stdin, Ctx.Env), default)
     // Text(result): ((TextContentBlock)result.Content[0]).Text
 
     [TestMethod] public async Task Initialize_ReportsServerInfo()
@@ -1432,7 +1587,7 @@ Run: `dotnet test dotnet/Ccusage.Mcp.slnx`. Expected: `Failed: 0`; every `EndToE
 
 - [ ] **Step 7: Build the engine and publish the server** [local]
 
-Run: `cargo build --manifest-path rust/Cargo.toml --release --bin ccusage --features fetch-litellm-pricing` and `dotnet publish dotnet/src/Ccusage.Mcp -c Release -r win-x64`. Expected: both binaries exist. (If AOT is CI-only here, use `dotnet publish dotnet/src/Ccusage.Mcp -c Release -r win-x64 -p:PublishAot=false --self-contained` for the local run — the e2e behavior is identical; the AOT build is exercised in CI.)
+Run: `cargo build --manifest-path rust/Cargo.toml --release --bin ccusage --features fetch-litellm-pricing`, and publish the server with `mcp__dotnet__dotnet_project` `Publish` (project `dotnet/src/Ccusage.Mcp`, runtime `win-x64`, configuration `Release`; never shell `dotnet publish`, §15). Expected: both binaries exist; the publish output contains no `warning IL`.
 
 - [ ] **Step 8: Run the e2e tests with the env vars** [local]
 
@@ -1442,9 +1597,17 @@ Run: `CCUSAGE_MCP_E2E_SERVER=$(pwd)/dotnet/src/Ccusage.Mcp/bin/Release/net10.0/w
 
 - [ ] **Step 10: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+test(mcp): add end-to-end parity tests against the real engine
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet
-git commit -m "test(mcp): add end-to-end parity tests against the real engine" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1459,11 +1622,12 @@ git commit -m "test(mcp): add end-to-end parity tests against the real engine" -
 
 **Files:**
 - Create: `.claude-plugin/marketplace.json`, `plugin/.claude-plugin/plugin.json`, `plugin/skills/ccusage/SKILL.md`
+- Modify: `.gitignore`
 
 - [ ] **Step 1: Write `.claude-plugin/marketplace.json`**
 
-§7.1 JSON with `<version>` → `20.0.45` (`https://github.com/Desulation/ccusage/releases/download/v20.0.45/ccusage.mcpb`), `mcpServers` placed per §15 row 7.
-Expected: `python -m json.tool .claude-plugin/marketplace.json` succeeds; `grep -c "v20.0.45/ccusage.mcpb" .claude-plugin/marketplace.json` prints `1`.
+§7.1 JSON with `<version>` → `20.0.45` (`https://github.com/Desulation/ccusage/releases/download/v20.0.45/ccusage.mcpb`), `mcpServers` placed per §15 row 7, plus a top-level `"description": "Coding-agent CLI token usage and cost reports over MCP"` (required by `--strict`; §15 row 7).
+Expected: `python -m json.tool .claude-plugin/marketplace.json` succeeds; `grep -c "v20.0.45/ccusage.mcpb" .claude-plugin/marketplace.json` prints `1`; `python -c "import json;assert json.load(open('.claude-plugin/marketplace.json'))['description']"` exits 0.
 
 - [ ] **Step 2: Write `plugin/.claude-plugin/plugin.json`**
 
@@ -1472,8 +1636,8 @@ Expected: valid JSON with `version` `20.0.45`.
 
 - [ ] **Step 3: Write `plugin/skills/ccusage/SKILL.md`**
 
-Frontmatter: `name: ccusage`; `description: Show coding-agent token usage and cost reports (Claude Code, Codex, OpenCode and 15 more) by day, week, month, session or billing block through the ccusage MCP server.`; `argument-hint: "[source] [report] [--flags]"`; `allowed-tools: mcp__plugin_ccusage_ccusage__report`. Body: (1) call the `report` tool with `args` set to exactly `$ARGUMENTS` — an empty string means daily across all sources; (2) present the returned JSON as a readable table with totals and the top cost drivers; (3) on an error result, show the error text and the valid choices it lists; (4) examples `/ccusage claude daily`, `/ccusage codex monthly`, `/ccusage weekly --last 2`; (5) only if Task 0 step 18 answered A: "If the tool is unavailable right after installation, run `/mcp` once to reconnect."
-Expected: file starts with `---`, has the four frontmatter keys, and contains `$ARGUMENTS`.
+Frontmatter: `name: ccusage`; `description: Show coding-agent token usage and cost reports (Claude Code, Codex, OpenCode and 15 more) by day, week, month, session or billing block through the ccusage MCP server.`; `argument-hint: "[source] [report] [--flags]"`; `allowed-tools: mcp__plugin_ccusage_ccusage__report`. Body: (1) call the `report` tool with `args` set to exactly `$ARGUMENTS` — an empty string means daily across all sources; (2) present the returned JSON as a readable table with totals and the top cost drivers; (3) on an error result, show the error text and the valid choices it lists; (4) examples `/ccusage claude daily`, `/ccusage codex monthly`, `/ccusage weekly --last 2`; (5) the sentence "If the tool is unavailable right after installation, run `/mcp` once to reconnect." (required: Task 0 step 18 was answered A).
+Expected: file starts with `---`, has the four frontmatter keys, and contains `$ARGUMENTS` and `/mcp`.
 
 - [ ] **Step 4: Validate the plugin** [local]
 
@@ -1483,11 +1647,22 @@ Run: `claude plugin validate --strict plugin`. Expected: success, no warnings.
 
 Run the marketplace form recorded in §15 row 7 (e.g. `claude plugin validate --strict .`). Expected: success, no warnings.
 
+- [ ] **Step 5a: Ignore the bundle cache** — append `plugin/.mcpb-cache/` to `.gitignore` (`--plugin-dir` extracts the bundle there; §15 environment notes).
+Expected: `grep -c "plugin/.mcpb-cache/" .gitignore` prints `1`.
+
 - [ ] **Step 6: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(plugin): add Claude Code plugin, /ccusage skill and marketplace
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
-git add .claude-plugin plugin
-git commit -m "feat(plugin): add Claude Code plugin, /ccusage skill and marketplace" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git add .claude-plugin plugin .gitignore
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1504,9 +1679,9 @@ git commit -m "feat(plugin): add Claude Code plugin, /ccusage skill and marketpl
 - Create: `dotnet/packaging/manifest.template.json`, `dotnet/packaging/launch.sh`, `dotnet/packaging/assemble-bundle.sh`, `dotnet/packaging/verify-bundle.sh`, `dotnet/packaging/bundle-smoke.ps1`
 
 **Interfaces (produces):**
-- `assemble-bundle.sh --version <v> --artifacts <dir> --out <dir>`: input layout `<dir>/ccusage-mcp-<rid>/ccusage-mcp[.exe]` for `linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64` and `<dir>/ccusage-<rid>/ccusage[.exe]` for all six RIDs (Task 11a artifact names). Output: `<out>/ccusage.mcpb` (layout §7.3; `manifest.json` = template with `__VERSION__` → `<v>`; `chmod +x` on every non-Windows binary; `zip -X -r` so unix modes are stored), `<out>/ccusage-mcp-<rid>.tar.gz` for linux/osx (`ccusage-mcp`, `ccusage`, `LICENSE`), `<out>/ccusage-mcp-win-x64.zip` and `<out>/ccusage-mcp-win-arm64.zip` (`ccusage-mcp.exe` = the win-x64 server, `ccusage.exe`, `LICENSE`), `<out>/SHA256SUMS` (`sha256sum` format, basenames). Exit 1 naming the first missing input.
-- `verify-bundle.sh <ccusage.mcpb> --version <v>`: unzip to a temp dir; assert the exact §7.3 file list (13 files, nothing else); `jq -e` checks `.manifest_version == "0.3"`, `.name == "ccusage"`, `.version == "<v>"`, `.server.type == "binary"`, `.server.entry_point == "launch.sh"`, `.server.mcp_config.command == "/bin/sh"`, `.server.mcp_config.args == ["${__dirname}/launch.sh"]`, `.server.mcp_config.platform_overrides.win32.command == "${__dirname}/win/ccusage-mcp.exe"`, `.compatibility.platforms == ["darwin","linux","win32"]`; every `linux/*/*` and `osx/*/*` entry has `x` in `zipinfo -l` mode; `sh -n launch.sh` parses. Exit 1 naming the first failing check.
-- `bundle-smoke.ps1 -Bundle <ccusage.mcpb> -FixturesDir <dir> -ExpectEnginePath <relative path>`: extract (`unzip` on Linux/macOS so modes survive; `Expand-Archive` on Windows); on Linux/macOS assert `(Get-Item <os>/<arch>/ccusage-mcp).UnixMode` and the engine's contain `x` (Q4 check); read `manifest.json`; pick `mcp_config.platform_overrides.win32` when `$IsWindows`, else the default `command`/`args`; replace `${__dirname}` with the extraction dir; start the process with env `CLAUDE_CONFIG_DIR=<fixtures>/claude`, `HOME`/`USERPROFILE` = temp; send newline-delimited JSON-RPC `initialize`, `notifications/initialized`, `tools/list`, `tools/call list-sources`, `tools/call daily {"source":"claude","offline":true}`; assert `serverInfo.name == "ccusage"`, 8 tools, `list-sources` text parses with non-null `engine-version` and `engine-path` ending in `-ExpectEnginePath` (Q5 check: `win\arm64\ccusage.exe` on Windows ARM64), `daily` result not `isError` and block 0 parses as JSON; print `bundle-smoke: ok`, exit 0; otherwise print the failing step, exit 1.
+- `assemble-bundle.sh --version <v> --artifacts <dir> --out <dir>`: input layout `<dir>/ccusage-mcp-<rid>/ccusage-mcp[.exe]` for `linux-x64 linux-arm64 osx-x64 osx-arm64 win-x64` and `<dir>/ccusage-<rid>/ccusage[.exe]` for all six RIDs (Task 11a artifact names). Output: `<out>/ccusage.mcpb` (layout §7.3; `manifest.json` = template with `__VERSION__` → `<v>`; `chmod +x` on every non-Windows binary first, then `zip -X -r` (Info-ZIP, which stores unix modes by default; `-X` only drops the extra uid/gid fields; never `python -m zipfile`/`Compress-Archive`, which store no modes)), `<out>/ccusage-mcp-<rid>.tar.gz` for linux/osx (`ccusage-mcp`, `ccusage`, `LICENSE`), `<out>/ccusage-mcp-win-x64.zip` and `<out>/ccusage-mcp-win-arm64.zip` (`ccusage-mcp.exe` = the win-x64 server, `ccusage.exe`, `LICENSE`), `<out>/SHA256SUMS` (`sha256sum` format, basenames). Exit 1 naming the first missing input.
+- `verify-bundle.sh <ccusage.mcpb> --version <v>`: unzip to a temp dir; assert the exact §7.3 file list (13 files, nothing else); `jq -e` checks `.manifest_version == "0.3"`, `.name == "ccusage"`, `.version == "<v>"`, `.server.type == "binary"`, `.server.entry_point == "launch.sh"`, `.server.mcp_config.command == "/bin/sh"`, `.server.mcp_config.args == ["${__dirname}/launch.sh"]`, `.server.mcp_config.platform_overrides.win32.command == "${__dirname}/win/ccusage-mcp.exe"`, `.compatibility.platforms == ["darwin","linux","win32"]` (single-quote every `jq` filter that contains `${__dirname}`: under `set -eu` a double-quoted one is an unbound-variable error); every `linux/*/*` and `osx/*/*` entry has `x` in `zipinfo -l` mode; `sh -n launch.sh` parses. Exit 1 naming the first failing check.
+- `bundle-smoke.ps1 -Bundle <ccusage.mcpb> -FixturesDir <dir> -ExpectEnginePath <relative path>`: extract (`unzip` on Linux/macOS so modes survive; `Expand-Archive` on Windows); on Linux/macOS assert `(Get-Item <os>/<arch>/ccusage-mcp).UnixMode` and the engine's contain `x` (Q4 check); read `manifest.json`; pick `mcp_config.platform_overrides.win32` when `$IsWindows`, else the default `command`/`args`; replace `${__dirname}` with the extraction dir; start the process with env `CLAUDE_CONFIG_DIR=<fixtures>/claude`, `HOME`/`USERPROFILE` = temp; send newline-delimited JSON-RPC `initialize`, `notifications/initialized`, `tools/list`, `tools/call list-sources`, `tools/call daily {"source":"claude","offline":true}`, writing each request and reading its reply (the notification has none) before writing the next, and closing stdin only after the last reply was read (a closed stdin shuts the transport down before replies are written; §15 environment notes); assert `serverInfo.name == "ccusage"`, 8 tools, `list-sources` text parses with non-null `engine-version` and `engine-path` ending in `-ExpectEnginePath` (Q5 check: `win\arm64\ccusage.exe` on Windows ARM64), `daily` result not `isError` and block 0 parses as JSON; print `bundle-smoke: ok`, exit 0; otherwise print the failing step, exit 1.
 - `launch.sh`: `#!/bin/sh`, `set -eu`; `uname -s` `Linux`→`linux`, `Darwin`→`osx`, else `echo "ccusage: unsupported OS: $(uname -s)" >&2; exit 1`; `uname -m` `x86_64|amd64`→`x64`, `aarch64|arm64`→`arm64`, else error exit 1; `dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)`; `target="$dir/$os/$arch/ccusage-mcp"`; missing → `echo "ccusage: missing $target" >&2; exit 1`; `[ -x "$target" ] || chmod +x "$target" "$dir/$os/$arch/ccusage"`; `exec "$target" "$@"`.
 - `manifest.template.json`: §7.3 JSON with `"version": "__VERSION__"`.
 
@@ -1522,31 +1697,44 @@ git commit -m "feat(plugin): add Claude Code plugin, /ccusage skill and marketpl
 
 - [ ] **Step 6: Build a fake artifacts directory** [local]
 
-Script: for each of the six RIDs copy `dotnet/tests/FakeEngine/bin/Debug/net10.0/ccusage.exe` to `/tmp/arts/ccusage-<rid>/ccusage` (`.exe` for win RIDs); for the five server RIDs copy the published `ccusage-mcp.exe` to `/tmp/arts/ccusage-mcp-<rid>/ccusage-mcp` (`.exe` for win-x64).
-Expected: `find /tmp/arts -type f | wc -l` prints `11`.
+Script (written with Write to `<scratchpad>/make-arts.sh`, run with `bash <scratchpad>/make-arts.sh`): for each of the six RIDs copy `dotnet/tests/FakeEngine/bin/Debug/net10.0/ccusage.exe` to `<scratchpad>/arts/ccusage-<rid>/ccusage` (`.exe` for win RIDs); for the five server RIDs copy the `ccusage-mcp.exe` published in Task 7b step 12 (dotnet MCP `Publish`) to `<scratchpad>/arts/ccusage-mcp-<rid>/ccusage-mcp` (`.exe` for win-x64).
+Expected: `find <scratchpad>/arts -type f | wc -l` prints `11`.
 
-- [ ] **Step 7: Run assemble on the fake artifacts** [local]
+- [ ] **Step 7: Run assemble on the fake artifacts** **[CI only]** (needs Info-ZIP `zip`, absent locally; Task 11b's `bundle` job runs `assemble-bundle.sh` on ubuntu-latest)
 
-Run: `dotnet/packaging/assemble-bundle.sh --version 20.0.45 --artifacts /tmp/arts --out /tmp/dist`. Expected: `ls /tmp/dist` lists `SHA256SUMS ccusage-mcp-linux-arm64.tar.gz ccusage-mcp-linux-x64.tar.gz ccusage-mcp-osx-arm64.tar.gz ccusage-mcp-osx-x64.tar.gz ccusage-mcp-win-arm64.zip ccusage-mcp-win-x64.zip ccusage.mcpb`; `sha256sum -c /tmp/dist/SHA256SUMS` (run inside `/tmp/dist`) prints `OK` for 7 files.
+Run (on a machine with `zip`): `dotnet/packaging/assemble-bundle.sh --version 20.0.45 --artifacts <arts> --out <dist>`. Expected: `ls <dist>` lists `SHA256SUMS ccusage-mcp-linux-arm64.tar.gz ccusage-mcp-linux-x64.tar.gz ccusage-mcp-osx-arm64.tar.gz ccusage-mcp-osx-x64.tar.gz ccusage-mcp-win-arm64.zip ccusage-mcp-win-x64.zip ccusage.mcpb`; `sha256sum -c SHA256SUMS` (run inside `<dist>`) prints `OK` for 7 files.
 
-- [ ] **Step 8: Run verify (positive)** [local]
+- [ ] **Step 8: Run verify (positive)** **[CI only]** (needs `jq`, absent locally; Task 11b's `bundle` job runs `verify-bundle.sh`)
 
-Run: `dotnet/packaging/verify-bundle.sh /tmp/dist/ccusage.mcpb --version 20.0.45`. Expected: exit 0, last line `verify-bundle: ok`.
+Run: `dotnet/packaging/verify-bundle.sh <dist>/ccusage.mcpb --version 20.0.45`. Expected: exit 0, last line `verify-bundle: ok`.
 
-- [ ] **Step 9: Run verify (negative)** [local]
+- [ ] **Step 9: Run verify (negative)** **[CI only]** (needs `zip` and `jq`; no CI job runs it — run it on a Linux runner or machine with both, else list it as unverified in the Task 17 step 5 handoff note)
 
-Run: `cp /tmp/dist/ccusage.mcpb /tmp/broken.mcpb && zip -d /tmp/broken.mcpb manifest.json && dotnet/packaging/verify-bundle.sh /tmp/broken.mcpb --version 20.0.45; echo $?`. Expected: `1`, with output naming `manifest.json`.
+Run: `cp <dist>/ccusage.mcpb <tmp>/broken.mcpb && zip -d <tmp>/broken.mcpb manifest.json && dotnet/packaging/verify-bundle.sh <tmp>/broken.mcpb --version 20.0.45; echo $?`. Expected: `1`, with output naming `manifest.json`.
 
-- [ ] **Step 10: Build a real Windows bundle and smoke it** [local, Windows]
+- [ ] **Step 9a: Build a layout-only bundle with Python** [local]
 
-Replace the server copies in `/tmp/arts/ccusage-mcp-*/` with the real published `ccusage-mcp.exe` and the engine copies with `rust/target/release/ccusage.exe`; re-run step 7; then `pwsh dotnet/packaging/bundle-smoke.ps1 -Bundle /tmp/dist/ccusage.mcpb -FixturesDir dotnet/tests/fixtures -ExpectEnginePath 'win\x64\ccusage.exe'`.
-Expected: last line `bundle-smoke: ok`. Linux/macOS legs and the ARM64 leg: **[CI only]** (Task 11b). Delete `/tmp/arts`, `/tmp/dist`, `/tmp/broken.mcpb`.
+Write `<scratchpad>/layout-bundle.py` with Write and run `python -I <scratchpad>/layout-bundle.py <scratchpad>/arts <scratchpad>/dist-local 20.0.45`: it writes `<scratchpad>/dist-local/ccusage.mcpb` with `zipfile` in the §7.3 layout (`manifest.json` = the template with `__VERSION__` → the version, `launch.sh`, the 11 binaries from the artifact folders). Python `zipfile` stores no unix modes, so this bundle is for the layout check and the Windows smoke only, never shipped.
+Expected: `python -m zipfile -l <scratchpad>/dist-local/ccusage.mcpb` lists exactly the 13 §7.3 paths.
+
+- [ ] **Step 10: Build a real Windows bundle and smoke it** [local, Windows, PowerShell tool]
+
+Replace the server copies in `<scratchpad>/arts/ccusage-mcp-*/` with the real published `ccusage-mcp.exe` and the engine copies with `rust/target/release/ccusage.exe`; re-run step 9a; then, through the **PowerShell** tool (the Bash tool would strip the backslashes in `-ExpectEnginePath`): `pwsh -NoProfile -File dotnet/packaging/bundle-smoke.ps1 -Bundle <scratchpad>/dist-local/ccusage.mcpb -FixturesDir dotnet/tests/fixtures -ExpectEnginePath 'win\x64\ccusage.exe'`.
+Expected: last line `bundle-smoke: ok`. Linux/macOS legs and the ARM64 leg: **[CI only]** (Task 11b). Delete `<scratchpad>/arts` and `<scratchpad>/dist-local`.
 
 - [ ] **Step 11: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+feat(bundle): add .mcpb manifest template, launcher and packaging scripts
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add dotnet/packaging
-git commit -m "feat(bundle): add .mcpb manifest template, launcher and packaging scripts" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1563,8 +1751,8 @@ git commit -m "feat(bundle): add .mcpb manifest template, launcher and packaging
 
 - [ ] **Step 1: Remove Blacksmith from `setup-nix-cache`**
 
-Delete the `Mount Nix store sticky disk` step (`useblacksmith/stickydisk`), the `Trim Nix store sticky disk` step, and the `sticky` output in the `backend` step (keep `commit`); make every `if: steps.backend.outputs.sticky != 'true'` step unconditional; drop the Blacksmith sentences from `description`. Keep `nix-quick-install-action` and `cache-nix-action` SHAs.
-Expected: `grep -c "sticky\|blacksmith" .github/actions/setup-nix-cache/action.yaml` prints `0`.
+Delete the `Mount Nix store sticky disk` step (`useblacksmith/stickydisk`), the `Trim Nix store sticky disk` step, and the `sticky` output in the `backend` step (keep `commit`); make every `if: steps.backend.outputs.sticky != 'true'` step unconditional; drop the Blacksmith sentences from `description`, and reword every other comment or description sentence that mentions sticky disks or Blacksmith (the `disk-job`/`save`/`defer-save` input descriptions, the `primary-key` output description, the "Compute Nix cache key" comment). Keep `nix-quick-install-action` and `cache-nix-action` SHAs.
+Expected: `grep -ciE "sticky|blacksmith" .github/actions/setup-nix-cache/action.yaml` prints `0`.
 
 - [ ] **Step 2: Rework the Linux engine action**
 
@@ -1593,9 +1781,17 @@ Run: `python -c "import yaml,glob;[yaml.safe_load(open(f)) for f in glob.glob('.
 
 - [ ] **Step 8: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+ci: build engine artifacts per RID and publish the AOT server without npm staging
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add .github/actions
-git commit -m "ci: build engine artifacts per RID and publish the AOT server without npm staging" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1623,7 +1819,7 @@ Expected: YAML parses.
 - [ ] **Step 3: Trim `ci.yaml` — kept jobs**
 
 Change every `runs-on: blacksmith-*` to `ubuntu-latest` (keep `ubuntu-slim`). In `test`: keep checkout + `setup-nix-cache` + the `parallel:` block with only `Run nix flake check` and `Run Rust tests`; delete `JS test`, `Nushell contribution-gate tests`, `Babashka performance harness test`, and `Root test dependency layers for the sticky disk`. Delete jobs `build-native-packages`, `npm-publish-dry-run-and-upload-pkg-pr-now`, `ccusage-preview-e2e`, `ccusage-perf-comment`, `action-timeline` (§16.3). Keep `changes`, `tirith-scan`, `tirith-sarif-upload`, `preflight`, `release-dispatch-status-pending`, `release-dispatch-status`.
-Expected: `grep -c "blacksmith\|Kesin11\|pkg.pr.new\|apps/ccusage" .github/workflows/ci.yaml` prints `0`.
+Expected: `grep -cE "blacksmith|Kesin11|pkg.pr.new|apps/ccusage" .github/workflows/ci.yaml` prints `0`.
 
 - [ ] **Step 4: Add `dotnet-test`**
 
@@ -1651,9 +1847,17 @@ Expected: `python -c "import yaml;yaml.safe_load(open('.github/workflows/ci.yaml
 
 - [ ] **Step 8: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+ci: replace npm jobs with dotnet tests, build matrix, bundle, smoke and plugin validation
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add .github/workflows/build-artifacts.yaml .github/workflows/ci.yaml
-git commit -m "ci: replace npm jobs with dotnet tests, build matrix, bundle, smoke and plugin validation" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 - [ ] **Step 9: DECISION — push the branch for CI-only verification**
@@ -1677,7 +1881,7 @@ Expected: `grep -c blacksmith .github/workflows/release.yaml` prints `0`.
 - [ ] **Step 2: Replace `build-native-packages` with `build-artifacts`** — `needs: tagpr`, `if: needs.tagpr.outputs.tag != ''`, `uses: ./.github/workflows/build-artifacts.yaml`, `with: {ref: ${{ needs.tagpr.outputs.tag }}}`, `permissions: {contents: read, actions: write}`.
 Expected: no `build-*-native-package` `uses:` remains in the file.
 
-- [ ] **Step 3: Delete the `npm` job.** Expected: `grep -c "pnpm\|npm-registry-gate\|publint" .github/workflows/release.yaml` prints `0`.
+- [ ] **Step 3: Delete the `npm` job.** Expected: `grep -cE "pnpm|npm-registry-gate|publint" .github/workflows/release.yaml` prints `0`.
 
 - [ ] **Step 4: Rewrite the `release` job**
 
@@ -1686,9 +1890,17 @@ Expected: `python -c "import yaml;yaml.safe_load(open('.github/workflows/release
 
 - [ ] **Step 5: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+ci(release): publish the mcpb bundle and archives with gh release create
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add .github/workflows/release.yaml
-git commit -m "ci(release): publish the mcpb bundle and archives with gh release create" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1705,13 +1917,21 @@ git commit -m "ci(release): publish the mcpb bundle and archives with gh release
 - [ ] **Step 1: Write the workflow**
 
 `on: {schedule: [{cron: '0 6 * * 1'}], workflow_dispatch: {}}`; `permissions: {contents: write, pull-requests: write}`; `concurrency: sync-upstream`; job `sync` on `ubuntu-latest`: checkout `fetch-depth: 0` (credentials persisted, needed for the push); `git remote add upstream https://github.com/ccusage/ccusage.git && git fetch upstream main`; step `check`: `if git merge-base --is-ancestor upstream/main origin/main; then echo up_to_date=true >> "$GITHUB_OUTPUT"; fi`; the rest `if: steps.check.outputs.up_to_date != 'true'`: `git push --force origin upstream/main:refs/heads/sync/upstream`; `{ printf 'Incoming commits from ccusage/ccusage main:\n\n'; git log --oneline --no-decorate origin/main..upstream/main; } > "$RUNNER_TEMP/body.md"`; `n=$(gh pr list --head sync/upstream --base main --state open --json number -q '.[0].number')`; `if [ -n "$n" ]; then gh pr edit "$n" --body-file "$RUNNER_TEMP/body.md"; else gh pr create --base main --head sync/upstream --title 'chore(deps): sync upstream ccusage/ccusage' --body-file "$RUNNER_TEMP/body.md"; fi` with `GH_TOKEN: ${{ github.token }}`. Header comment: CI does not run automatically on this PR (GITHUB_TOKEN); run `gh workflow run ci.yaml --ref sync/upstream`.
-Expected: YAML parses; `grep -c "push.*main\b" .github/workflows/sync-upstream.yaml` shows no push to `main` (only `refs/heads/sync/upstream`).
+Expected: YAML parses; through the **PowerShell** tool, `(Select-String -Path .github/workflows/sync-upstream.yaml -Pattern 'push[^|]*(:refs/heads/main|origin main)\b').Count` prints `0` (no push to `main`) and `(Select-String -Path .github/workflows/sync-upstream.yaml -Pattern 'refs/heads/sync/upstream' -SimpleMatch).Count` prints `1`.
 
 - [ ] **Step 2: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+ci: add weekly upstream sync pull request workflow
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add .github/workflows/sync-upstream.yaml
-git commit -m "ci: add weekly upstream sync pull request workflow" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1755,38 +1975,54 @@ Content: `{"name":"ccusage","version":"20.0.45","description":"Analyze coding (a
 Expected: `python -m json.tool package.json` succeeds; `jq -r .name package.json` → `ccusage` (use Python if `jq` is absent).
 
 - [ ] **Step 4: Edit `pnpm-workspace.yaml`** — `packages: [docs]`; delete the `types` catalog (`@types/node`, `@types/react`); keep everything else.
-Expected: `grep -c "apps/\*\|packages/\*\|types:" pnpm-workspace.yaml` prints `0`.
+Expected: `grep -cE "apps/[*]|packages/[*]|types:" pnpm-workspace.yaml` prints `0`.
 
 - [ ] **Step 5: Edit `docs/package.json`** — scripts `"build": "cp ../config-schema.json public/config-schema.json && vitepress build"`, `"dev": "cp ../config-schema.json public/config-schema.json && vitepress dev"`; remove `@types/node` and `@types/react` devDependencies.
-Expected: `grep -c "apps/ccusage\|catalog:types" docs/package.json` prints `0`.
+Expected: `grep -cE "apps/ccusage|catalog:types" docs/package.json` prints `0`.
 
 - [ ] **Step 6: Edit `package.nix`** — replace `cliPackageJson = lib.importJSON (root + /apps/ccusage/package.json);` with `rootPackageJson = lib.importJSON (root + /package.json);`; `pname = rootPackageJson.name`; `meta = { inherit (rootPackageJson) description homepage; license = lib.getLicenseFromSpdxId rootPackageJson.license; mainProgram = "ccusage"; }`; fix the two comments above them.
-Expected: `grep -c "cliPackageJson\|apps/ccusage" package.nix` prints `0`.
+Expected: `grep -cE "cliPackageJson|apps/ccusage" package.nix` prints `0`.
 
 - [ ] **Step 7: Edit `nix/checks.nix`** — `apps/ccusage/config-schema.json` → `config-schema.json` (diff, two messages, `check-jsonschema` line); `just ccusage::generate-schema` → `just schema`; delete the whole `publint = mkRepoCheck ...;` attribute; fix the comment at the old line 104.
-Expected: `grep -c "apps/ccusage\|publint" nix/checks.nix` prints `0`.
+Expected: `grep -cE "apps/ccusage|publint" nix/checks.nix` prints `0`.
 
 - [ ] **Step 8: Edit `nix/treefmt.nix`, `nix/git-hooks.nix`, `nix/packages.nix`, `nix/dev-shell.nix`**
 
 `treefmt.nix`: `install_if_changed "$tmp" config-schema.json`; `install_if_changed config-schema.json docs/public/config-schema.json`; `schema-gen.includes` first entry `"config-schema.json"`; comments updated. `git-hooks.nix`: `node-test.entry` → `"${lib.getExe pkgs.nodejs} --test nix/tools/models-dev-gen/compact.test.ts"`. `packages.nix`: delete the `publint = ...;` binding and `publint` from `packages`. `dev-shell.nix`: delete `config.packages.publint`.
-Expected: `grep -rc "apps/ccusage\|publint" nix/ | grep -v ":0"` prints nothing.
+Expected: `grep -rcE "apps/ccusage|publint" nix/ | grep -v ":0"` prints nothing.
 
 - [ ] **Step 9: Edit `justfile`, `ccusage.example.json`, `docs/README.md`, `.tagpr`, `.gitignore`**
 
 `justfile`: delete `mod ccusage 'apps/ccusage'`; `build: docs::build`; `test-node` → `TZ=UTC node --test nix/tools/models-dev-gen/compact.test.ts`; delete `generate-large-fixture`; `schema` comment → `# Regenerate config-schema.json from the Rust source`; drop the prepack sentence in the header comment. `ccusage.example.json`: `"$schema": "./config-schema.json"`. `docs/README.md`: the schema sentence names `config-schema.json`. `.tagpr`: `versionFile = package.json,docs/package.json,plugin/.claude-plugin/plugin.json,.claude-plugin/marketplace.json,dotnet/Directory.Build.props`. `.gitignore`: delete `packages/ccusage-*/bin/`.
-Expected: `grep -rn "apps/ccusage\|packages/ccusage" justfile ccusage.example.json docs/README.md .tagpr .gitignore` prints nothing.
+Expected: `grep -rnE "apps/ccusage|packages/ccusage" justfile ccusage.example.json docs/README.md .tagpr .gitignore` prints nothing.
 
 - [ ] **Step 10: Verify the tree** [local]
 
-Run: `grep -rln "apps/ccusage\|packages/ccusage\|publint" --exclude-dir=.git --exclude-dir=superpowers --exclude-dir=rust --exclude=pnpm-lock.yaml .`. Expected: only files under `.agents/`, `AGENTS.md`, `README.md`, `docs/guide/`, `docs/index.md`, `docs/.vitepress/` (handled by Tasks 15–16). Then `dotnet test dotnet/Ccusage.Mcp.slnx` → `Failed: 0`. **[CI only]**: `nix flake check`, `docs-build`.
+Run: `grep -rlnE "apps/ccusage|packages/ccusage|publint" --exclude-dir=.git --exclude-dir=superpowers --exclude-dir=.superpowers --exclude-dir=rust --exclude=pnpm-lock.yaml .`. Expected: only files under `.agents/`, `AGENTS.md`, `README.md`, `docs/guide/`, `docs/index.md`, `docs/.vitepress/` (handled by Tasks 15–16). Then `dotnet test dotnet/Ccusage.Mcp.slnx` → `Failed: 0`. **[CI only]**: `nix flake check`, `docs-build`.
 
 - [ ] **Step 11: Commit (two commits)**
 
+Write `<scratchpad>/commit-msg-1.txt`:
+
+```text
+chore: remove npm packages and launcher; move config-schema.json and LICENSE to the root
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
+Write `<scratchpad>/commit-msg-2.txt`:
+
+```text
+chore(deps): keep pnpm workspace for docs only and point Nix, just and tagpr at the new layout
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add -A apps packages README.md LICENSE config-schema.json .oxlintrc.json .oxfmtrc.json nix/tools/publint
-git commit -m "chore: remove npm packages and launcher; move config-schema.json and LICENSE to the root" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg-1.txt
 git add package.json pnpm-workspace.yaml docs/package.json docs/README.md package.nix nix justfile ccusage.example.json .tagpr .gitignore
-git commit -m "chore(deps): keep pnpm workspace for docs only and point Nix, just and tagpr at the new layout" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg-2.txt
 ```
 
 - [ ] **Step 12: DECISION — push the branch (lockfile regeneration + CI-only verification)**
@@ -1798,9 +2034,17 @@ Question: "Push `feat/csharp-mcp-server` to `origin` and dispatch CI so `docs-bu
 Run: `run=$(gh run list --workflow ci.yaml --branch feat/csharp-mcp-server --limit 1 --json databaseId -q '.[0].databaseId')`; wait for `docs-build` to finish (`gh run watch "$run"`); `gh run download "$run" --name pnpm-lock --dir .`; `git diff --stat pnpm-lock.yaml`.
 Expected: `pnpm-lock.yaml` changed (importers reduced to `.` and `docs`). Commit:
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+chore(deps): regenerate pnpm lockfile for the docs-only workspace
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add pnpm-lock.yaml
-git commit -m "chore(deps): regenerate pnpm lockfile for the docs-only workspace" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 Fix any other CI failure from that run before Task 14b (each fix its own commit); pushing the fixes is covered by the step 12 answer.
@@ -1813,8 +2057,8 @@ Fix any other CI failure from that run before Task 14b (each fix its own commit)
 
 **Files:**
 - Delete: `.github/workflows/{pr-gate.yaml,issue-gate.yaml,gate-close-pr.yaml,approve-contributor.yaml,pullfrog.yml,autofix.yaml,update-pricing.yaml,check-links.yaml}`, `.github/scripts/contribution-gate/`, `.github/scripts/contribution-gate.nu`, `.github/scripts/contribution-gate.test.nu`, `.github/APPROVED_CONTRIBUTORS`, `.github/scripts/npm-registry-gate.nu`, `.github/scripts/generate-e2e-fixture.nu`, `.github/scripts/upsert-pr-comment.nu` (§16.6), `.github/actions/commit-and-push-main/` (§16.5)
-- Modify: `.github/workflows/check-pr-title.yaml`, `CONTRIBUTING.md` (§16.7)
-- Keep: `.github/scripts/{pricing-lock,update-litellm-lock,update-models-dev-lock}.nu` (justfile recipes), `.github/tagpr-template.md`, `renovate.json`, `release.yml`, `FUNDING.yaml`, `ISSUE_TEMPLATE/`, `actionlint.yaml`
+- Modify: `.github/workflows/check-pr-title.yaml`, `CONTRIBUTING.md` (§16.7), `.github/actionlint.yaml` (Blacksmith runner labels only; spec §9)
+- Keep: `.github/scripts/{pricing-lock,update-litellm-lock,update-models-dev-lock}.nu` (justfile recipes), `.github/tagpr-template.md`, `renovate.json`, `release.yml`, `FUNDING.yaml`, `ISSUE_TEMPLATE/`
 
 - [ ] **Step 1: Delete the files**
 
@@ -1825,20 +2069,31 @@ git rm -r -q .github/workflows/pr-gate.yaml .github/workflows/issue-gate.yaml .g
 Expected: `ls .github/workflows` prints `build-artifacts.yaml check-pr-title.yaml ci.yaml release.yaml sync-upstream.yaml`.
 
 - [ ] **Step 2: Trim `check-pr-title.yaml`** — delete the `scope` job and its comment block; keep `main`.
-Expected: `grep -c "hustcer/setup-nu\|scope:" .github/workflows/check-pr-title.yaml` prints `0`.
+Expected: `grep -cE "hustcer/setup-nu|scope:" .github/workflows/check-pr-title.yaml` prints `0`.
 
-- [ ] **Step 3: Trim `CONTRIBUTING.md`** — delete the `## Contribution Gate` section (through the `lgtm` bullets and the sentence after them); in `## Quality Bar For Issues` delete `Maintainers may reopen clear, useful issues and approve the author for future issues or PRs.`; leave every other section.
-Expected: `grep -c "lgtm\|contribution gate" -i CONTRIBUTING.md` prints `0`.
+- [ ] **Step 2a: Remove the Blacksmith runner labels from `.github/actionlint.yaml`** — delete the `self-hosted-runner` block (its only `labels` are the four `blacksmith-*` runners); keep `paths`.
+Expected: `grep -ci "blacksmith" .github/actionlint.yaml` prints `0`.
+
+- [ ] **Step 3: Trim `CONTRIBUTING.md`** — delete the `## Contribution Gate` section (through the `lgtm` bullets and the sentence after them); in `## Quality Bar For Issues` delete `Maintainers may reopen clear, useful issues and approve the author for future issues or PRs.`; in `## Before Submitting a PR` drop the clause "and wait for approval with `lgtm`" (the sentence becomes "Open an issue first before submitting a PR whenever possible."); leave everything else.
+Expected: `grep -ciE "lgtm|contribution gate" CONTRIBUTING.md` prints `0`.
 
 - [ ] **Step 4: Verify** [local]
 
-Run: `grep -rn "hustcer/setup-nu\|useblacksmith\|lycheeverse\|autofix-ci\|pullfrog\|Kesin11\|blacksmith-\|commit-and-push-main\|upsert-pr-comment\|generate-e2e-fixture" .github`. Expected: no output.
+Run: `grep -rnE "hustcer/setup-nu|useblacksmith|lycheeverse|autofix-ci|pullfrog|Kesin11|blacksmith-|commit-and-push-main|upsert-pr-comment|generate-e2e-fixture" .github`. Expected: no output.
 
 - [ ] **Step 5: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+ci: drop upstream contribution-gate, pricing, link-check and autofix automation
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add -A .github CONTRIBUTING.md
-git commit -m "ci: drop upstream contribution-gate, pricing, link-check and autofix automation" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1852,12 +2107,12 @@ git commit -m "ci: drop upstream contribution-gate, pricing, link-check and auto
 **Files:**
 - Create: `.agents/skills/dotnet/SKILL.md`
 - Delete: `.agents/skills/typescript/`, `.agents/skills/testing/references/node-test.md`
-- Modify: `AGENTS.md`, `.agents/skills/development/SKILL.md`, `.agents/skills/development/references/commands.md`, `.agents/skills/testing/SKILL.md`, `.agents/skills/docs/SKILL.md`, `.agents/skills/fix-ci/SKILL.md`, `.agents/skills/nushell/SKILL.md`, `.agents/skills/profile/SKILL.md`, `.agents/skills/profile/references/rust.md`, `.agents/skills/rust-binary-size/SKILL.md`, `.agents/skills/tdd/SKILL.md`
+- Modify: `AGENTS.md`, `.agents/skills/development/SKILL.md`, `.agents/skills/development/references/commands.md`, `.agents/skills/testing/SKILL.md`, `.agents/skills/docs/SKILL.md`, `.agents/skills/fix-ci/SKILL.md`, `.agents/skills/nushell/SKILL.md`, `.agents/skills/profile/SKILL.md`, `.agents/skills/profile/references/rust.md`, `.agents/skills/rust-binary-size/SKILL.md`, `.agents/skills/tdd/SKILL.md`, `.agents/skills/rust/SKILL.md`
 
 - [ ] **Step 1: Edit `AGENTS.md`**
 
 Routing: replace the `typescript` row with `` `dotnet` - `dotnet/` C# MCP server: catalog, validator, engine runner, MCP handlers, packaging, MSTest.``; `testing` row → "cargo and MSTest tests, CLI snapshots, fixtures, pricing and model tests". Repository Shape: replace the `apps/ccusage` sentence with "`dotnet/` is the MCP distribution layer: it wraps the `ccusage` binary and adds no adapter logic."; nearest-AGENTS list: `apps/ccusage/AGENTS.md` → `dotnet/AGENTS.md - C# MCP server`. Policy: delete the `devDependencies` bullet; add "C# only in `dotnet/`; any third-party NuGet package needs explicit approval (spec §12)."
-Expected: `grep -c "apps/ccusage\|typescript" AGENTS.md` prints `0`.
+Expected: `grep -cE "apps/ccusage|typescript" AGENTS.md` prints `0`.
 
 - [ ] **Step 2: Write `.agents/skills/dotnet/SKILL.md`**
 
@@ -1873,21 +2128,29 @@ git rm -r -q .agents/skills/typescript .agents/skills/testing/references/node-te
 Expected: `ls .agents/skills | grep -c typescript` prints `0`.
 
 - [ ] **Step 4: Edit `development/SKILL.md` and `references/commands.md`** — "The npm Packaging Seam" → "The MCP Packaging Seam" (`dotnet/`, `dotnet/packaging/*`, `plugin/`, `.claude-plugin/`, version files per `.tagpr`); description frontmatter drops "the npm launcher or native packaging"; `commands.md`: JS/TS tooling sentence → "docs-site tooling in `docs/package.json`"; Releases → "tagpr tags; `release.yaml` builds the matrix, bundles `ccusage.mcpb`, and creates the GitHub Release; `sync-upstream.yaml` opens the weekly upstream PR".
-Expected: `grep -c "apps/ccusage\|npm" .agents/skills/development/SKILL.md .agents/skills/development/references/commands.md` prints `0` for both.
+Expected: `grep -cwE "apps/ccusage|npm" .agents/skills/development/SKILL.md .agents/skills/development/references/commands.md` prints `0` for both (`-w` so the kept `pnpm-lock.yaml` mention does not count).
 
 - [ ] **Step 5: Edit `testing/SKILL.md` and `docs/SKILL.md`** — testing: "Node" section → ".NET: MSTest in `dotnet/tests/Ccusage.Mcp.Tests`, FakeEngine, fixtures under `dotnet/tests/fixtures`, e2e via `CCUSAGE_MCP_E2E_SERVER`/`CCUSAGE_ENGINE`; the one remaining Node test is `nix/tools/models-dev-gen/compact.test.ts` (`just test-node`)"; description mentions MSTest. docs: surfaces → root `README.md`, `docs/guide/` incl. `docs/guide/mcp.md`, VitePress nav, `plugin/skills/ccusage/SKILL.md`; delete the two `apps/ccusage` bullets.
-Expected: `grep -c "apps/ccusage\|node-test" .agents/skills/testing/SKILL.md .agents/skills/docs/SKILL.md` prints `0` for both.
+Expected: `grep -cE "apps/ccusage|node-test" .agents/skills/testing/SKILL.md .agents/skills/docs/SKILL.md` prints `0` for both.
 
 - [ ] **Step 6: Fix the remaining dangling references**
 
-`fix-ci`: table rows → `dotnet-test` → `dotnet test dotnet/Ccusage.Mcp.slnx`; `e2e` → "set the two env vars, then the same"; `bundle-smoke` → `pwsh dotnet/packaging/bundle-smoke.ps1`; delete the `JS test` and `Babashka` rows. `nushell`: description and body drop `apps/ccusage/scripts`, `upsert-pr-comment.nu`, `stage-native-package.nu`, `native-binary.nu`. `profile`: delete the JS-launcher profiling paragraph and the `node --cpu-prof ... cli.js` example; `references/rust.md`: delete the `compare-pr-performance.bb` sentence. `rust-binary-size`: drop the `apps/ccusage/scripts/**` entries from `paths`/`globs` and the sentence naming them. `tdd`: delete the `node --test ... cli.test.ts` line.
-Expected: `grep -rn "apps/ccusage\|packages/ccusage\|cli.js\|publint\|compare-pr-performance" AGENTS.md .agents` prints nothing.
+`fix-ci`: table rows → `dotnet-test` → `dotnet test dotnet/Ccusage.Mcp.slnx`; `e2e` → "set the two env vars, then the same"; `bundle-smoke` → `pwsh dotnet/packaging/bundle-smoke.ps1`; delete the `JS test` and `Babashka` rows. `nushell`: description and body drop `apps/ccusage/scripts`, `upsert-pr-comment.nu`, `stage-native-package.nu`, `native-binary.nu`. `profile`: delete the JS-launcher profiling paragraph and the `node --cpu-prof ... cli.js` example; `references/rust.md`: delete the `compare-pr-performance.bb` sentence. `rust-binary-size`: drop the `apps/ccusage/scripts/**` entries from `paths`/`globs` and the sentence naming them. `tdd`: delete the `node --test ... cli.test.ts` line. `rust`: in the historical-comparison paragraph (around line 45) drop the parenthetical example `(git log -1 -- apps/ccusage/src/adapter)`; the sentence stays.
+Expected: `grep -rnE "apps/ccusage|packages/ccusage|cli.js|publint|compare-pr-performance" AGENTS.md .agents` prints nothing.
 
 - [ ] **Step 7: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+docs(agents): describe the dotnet MCP layer and retire the npm skills
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add -A AGENTS.md .agents
-git commit -m "docs(agents): describe the dotnet MCP layer and retire the npm skills" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1908,40 +2171,48 @@ git commit -m "docs(agents): describe the dotnet MCP layer and retire the npm sk
 - [ ] **Step 1: Rewrite `README.md`**
 
 Remove: the whole badge block (Socket, npm version, NPM downloads, DeepWiki, Awesome, 技術者倫理, Trendshift); `## Major Sponsors`, GitHub Sponsors, Star History; every `npx`/`bunx`/`pnpm dlx`/`pnpx`/pkg.pr.new line and the bunx caching note; `nix run github:ccusage/ccusage`; the `pnpm install` dev note; the update-pricing paragraph. Rewrite: intro + `Fork of [ccusage/ccusage](https://github.com/ccusage/ccusage) by @ryoppippi`; `## Quick Start` (`/plugin marketplace add Desulation/ccusage`, `/plugin install ccusage@ccusage`, `/ccusage claude daily`); `## Installation` with four numbered options (plugin; Claude Desktop `ccusage.mcpb` from Releases; other MCP clients: archive + `{"mcpServers":{"ccusage":{"command":"/path/to/ccusage-mcp"}}}`; standalone `ccusage` CLI from the archive + `xattr -d com.apple.quarantine ccusage ccusage-mcp` note); `## Usage` (slash commands; three example questions such as "How much did I spend on Codex this month?"; the existing CLI block with `bunx ccusage` → `ccusage`); `## MCP reference` table (8 tools, the prompt, the skill; link `docs/guide/mcp.md`); `## Development` (Nix/direnv/`just` kept; `dotnet/` subsection: .NET 10 SDK, `dotnet build/test/publish`, e2e env vars; one sentence on `sync-upstream.yaml`). Keep: Supported Sources table, Features (+ `MCP server for Claude Code and other MCP clients`), License (MIT © @ryoppippi); Documentation link → `docs/guide/`.
-Expected: `grep -c "npx\|bunx\|pnpm dlx\|pnpx\|pkg.pr.new\|sponsors\|star-history\|shields.io" README.md` prints `0`; `grep -c "Desulation/ccusage" README.md` ≥ 3.
+Expected: `grep -cE "npx|bunx|pnpm dlx|pnpx|pkg.pr.new|sponsors|star-history|shields.io" README.md` prints `0`; `grep -c "Desulation/ccusage" README.md` ≥ 3.
 
 - [ ] **Step 2: Replace package-runner commands in the guides**
 
 For each listed guide: `npx ccusage@latest ` → `ccusage `, `bunx ccusage ` → `ccusage `; then read each changed hunk and fix prose that assumed a package runner.
-Expected: `grep -rn "npx ccusage\|bunx ccusage" docs/guide` prints nothing.
+Expected: `grep -rnE "npx ccusage|bunx ccusage" docs/guide` prints nothing.
 
 - [ ] **Step 3: Rewrite `docs/guide/installation.md`** — mirror README `## Installation` (four options), a `## Development` section (Nix/direnv/just + `dotnet/` commands), `## Verification` (`ccusage --version`, `ccusage-mcp --version`), `## Updating` (`/plugin update ccusage@ccusage`; re-download the archive), `## Troubleshooting` (macOS quarantine; engine not found → `CCUSAGE_ENGINE`), `## Next Steps` (links kept). Drop runtime comparison, Node/Bun requirements, npm sections.
-Expected: `grep -c "npm\|bunx\|node" -i docs/guide/installation.md` prints `0` (allow `Node` only if it appears in an unrelated kept sentence — none expected).
+Expected: `grep -ciwE "npm|bunx|node" docs/guide/installation.md` prints `0` (`-w` so a `pnpm` docs-build mention in `## Development` does not count; allow `Node` only if it appears in an unrelated kept sentence — none expected).
 
 - [ ] **Step 4: Rewrite `docs/guide/getting-started.md`** — Prerequisites (Claude Code or another MCP client, or the standalone CLI); Quick Start = README's; keep "Your First Report", "Understanding the Output", "Next Steps", "Common Use Cases" (commands as `ccusage …`), "Troubleshooting", "Custom Data Directory", "Getting Help" (GitHub link → `Desulation/ccusage`; add "ask Claude: `/ccusage --help`-style questions go through the `list-sources` tool"). Delete the Nix/npx/pnpm/pkg.pr.new code group and the bunx tip.
-Expected: `grep -c "bunx\|npx\|pkg.pr.new\|nix run" docs/guide/getting-started.md` prints `0`.
+Expected: `grep -cE "bunx|npx|pkg.pr.new|nix run" docs/guide/getting-started.md` prints `0`.
 
 - [ ] **Step 5: Fix `docs/guide/index.md`** — its one `npx`/`bunx` line → `ccusage`. Expected: no `npx`/`bunx` in the file.
 
 - [ ] **Step 6: Write `docs/guide/mcp.md`**
 
-Sections: `# MCP Server`; Overview; Install (three ways, same as README); Tools — one `##` per tool with a parameters table (name, type, description incl. "Applies to") generated by reading `dotnet/tests/Ccusage.Mcp.Tests/Snapshots/tools-list.json`; Prompt `ccusage` with the `/mcp__plugin_ccusage_ccusage__ccusage` and `/ccusage:ccusage` forms (§5.6); Skill `/ccusage` (§7.2); Results and errors (§5.7); Engine location (the four rules, `CCUSAGE_ENGINE`); Environment (`CCUSAGE_MCP_TIMEOUT_SECONDS`, inherited `CLAUDE_CONFIG_DIR`/`CODEX_HOME`/…); Troubleshooting (engine not found → the `Checked:` list; timeouts → `since`/`last` or raise the env var; large outputs → `since`/`last`/`no-cost`; macOS quarantine; the `/mcp` reconnect sentence only if Task 0 step 18 = A).
+Sections: `# MCP Server`; Overview; Install (three ways, same as README); Tools — one `##` per tool with a parameters table (name, type, description incl. "Applies to") generated by reading `dotnet/tests/Ccusage.Mcp.Tests/Snapshots/tools-list.json`; Prompt `ccusage` with the `/mcp__plugin_ccusage_ccusage__ccusage` and `/ccusage:ccusage` forms (§5.6); Skill `/ccusage` (§7.2); Results and errors (§5.7; `list-sources` fields per §5.4 plus the optional `engine-error`, spec §16 item 7); Engine location (the four rules, `CCUSAGE_ENGINE`); Environment (`CCUSAGE_MCP_TIMEOUT_SECONDS`, inherited `CLAUDE_CONFIG_DIR`/`CODEX_HOME`/…); Troubleshooting (engine not found → the `Checked:` list; timeouts → `since`/`last` or raise the env var; large outputs → `since`/`last`/`no-cost`; macOS quarantine; the one-time `/mcp` reconnect sentence, required because Task 0 step 18 was answered A).
 Expected: `grep -c "^## " docs/guide/mcp.md` ≥ 9; every tool name appears as a heading.
 
 - [ ] **Step 7: Remove sponsor/promotional content** (§3.4, §16.8)
 
-`git rm docs/guide/sponsors.md`; delete the `<div ...>Support ccusage … </div>` block from `docs/index.md` (keep the project-history line; `actions` GitHub link → `https://github.com/Desulation/ccusage`); in `docs/.vitepress/config.ts`: delete nav items `npm`, `DeepWiki`, `Package Stats`, `Sponsor`; delete the `Sponsors` sidebar item (keep `Community` with `Community Projects`); add `{ text: 'MCP Server', link: '/guide/mcp' }` to the `Integration` group; delete the `npm` social link; delete the `/npm`, `/deepwiki`, `/sponsor` redirects; point `nav` GitHub, `Changelog`, `socialLinks` github, and `editLink.pattern` at `https://github.com/Desulation/ccusage`. Leave `docs/wrangler.jsonc`.
-Expected: `grep -rn "sponsor\|npmjs\|deepwiki\|tanstack\|ryoppippi/ccusage" -i docs/index.md docs/.vitepress/config.ts` prints nothing.
+`git rm docs/guide/sponsors.md`; delete the `<div ...>Support ccusage … </div>` block from `docs/index.md` (keep the project-history line; `actions` GitHub link → `https://github.com/Desulation/ccusage`); in `docs/.vitepress/config.ts`: delete nav items `npm`, `DeepWiki`, `Package Stats`, `Sponsor`; delete the `Sponsors` sidebar item (keep `Community` with `Community Projects`); add `{ text: 'MCP Server', link: '/guide/mcp' }` to the `Integration` group; delete the `npm` social link; delete the `/npm`, `/deepwiki`, `/sponsor` redirects; point `nav` GitHub, `Changelog`, `socialLinks` github, and `editLink.pattern` at `https://github.com/Desulation/ccusage`; in `head`, `og:url` → `https://github.com/Desulation/ccusage` and `og:image` → `https://cdn.jsdelivr.net/gh/Desulation/ccusage@main/docs/public/logo.png`; the `/gh` redirect → `https://github.com/Desulation/ccusage` (spec §16 item 3: GitHub targets point at `Desulation/ccusage`). Leave `docs/wrangler.jsonc`.
+Expected: `grep -rniE "sponsor|npmjs|deepwiki|tanstack|ryoppippi/ccusage" docs/index.md docs/.vitepress/config.ts` prints nothing.
 
 - [ ] **Step 8: Verify** [local]
 
-Run: `grep -rn "npx ccusage\|bunx\|pnpm dlx\|pnpx\|pkg.pr.new\|sponsors.ryoppippi\|github.com/sponsors" README.md docs/guide docs/index.md docs/.vitepress`. Expected: no output. **[CI only]**: `docs-build`.
+Run: `grep -rnE "npx ccusage|bunx|pnpm dlx|pnpx|pkg.pr.new|sponsors.ryoppippi|github.com/sponsors" README.md docs/guide docs/index.md docs/.vitepress`. Expected: no output. **[CI only]**: `docs-build`.
 
 - [ ] **Step 9: Commit**
 
+Write `<scratchpad>/commit-msg.txt`:
+
+```text
+docs: rewrite README and guides for the MCP plugin distribution
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ```bash
 git add -A README.md docs
-git commit -m "docs: rewrite README and guides for the MCP plugin distribution" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+git commit -F <scratchpad>/commit-msg.txt
 ```
 
 ---
@@ -1962,15 +2233,15 @@ Run: Task 8 step 8's command. Expected: `Failed: 0`, no inconclusive results.
 
 - [ ] **Step 3: Plugin and versions** [local]
 
-Run: `claude plugin validate --strict plugin` and the Task 11b version-consistency script (bash + `jq`, or Python). Expected: success; one version printed five times.
+Run: `claude plugin validate --strict plugin`, then the Task 11b version-consistency check as Python (`jq` is absent and the YAML's `sed` needs backslashes): write `<scratchpad>/versions.py` with Write — read `version` from `package.json`, `docs/package.json`, `plugin/.claude-plugin/plugin.json` with `json`, the marketplace URL version with `re` (`download/v([0-9.]+)/ccusage.mcpb`) and `<Version>` from `dotnet/Directory.Build.props` with `re`, print all five — and run `python -I <scratchpad>/versions.py` from the repo root. Expected: success; one version printed five times.
 
 - [ ] **Step 4: Dangling references** [local]
 
-Run: `git grep -n "apps/ccusage\|packages/ccusage\|npm publish\|pkg.pr.new\|blacksmith" -- . ':!rust' ':!docs/superpowers' ':!pnpm-lock.yaml'`. Expected: no output. `git status --short` → empty.
+Run: `git grep -nE "apps/ccusage|packages/ccusage|npm publish|pkg.pr.new|blacksmith" -- . ':!rust' ':!docs/superpowers' ':!pnpm-lock.yaml'`. Expected: no output. `git status --short` → empty.
 
 - [ ] **Step 5: Audit the commits and write the handoff note** [local]
 
-Run: `git log --format=%B main..HEAD | grep -c "Co-Authored-By: Claude Opus 5.5"` equals `git rev-list --count main..HEAD`; every subject matches `^(feat|fix|chore|docs|test|ci|refactor)(\([a-z-]+\))?: `. Write the handoff note (in the reply, not a file): what remains **[CI only]**/unverified (Nix builds, Linux/macOS bundle and `launch.sh`, the Windows ARM64 leg, the release flow, `plugin-validate`), whether the lockfile was regenerated, and the §15 rows still "pending CI".
+Run: `git log --format=%B main..HEAD | grep -c "Co-Authored-By: Claude Opus 5.5"` equals `git rev-list --count main..HEAD`; through the **PowerShell** tool, `git log --format=%s main..HEAD | Where-Object { $_ -notmatch '^(feat|fix|chore|docs|test|ci|refactor)(\([a-z-]+\))?: ' }` prints nothing. Write the handoff note (in the reply, not a file): what remains **[CI only]**/unverified (Nix builds, Linux/macOS bundle and `launch.sh`, the Windows ARM64 leg, the release flow, `plugin-validate`), whether the lockfile was regenerated, and the §15 rows still "pending CI".
 Expected: counts match; note written.
 
 - [ ] **Step 6: DECISION — open the pull request**
