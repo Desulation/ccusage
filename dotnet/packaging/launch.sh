@@ -30,6 +30,10 @@ if [ ! -f "$target" ]; then
 fi
 
 # A zip extractor that drops unix modes leaves the binaries non-executable; restore them.
-[ -x "$target" ] || chmod +x "$target" "$dir/$os/$arch/ccusage"
+# A failing chmod (a read-only extraction directory, say) must not exit silently under set -e.
+if [ ! -x "$target" ] && ! chmod +x "$target" "$dir/$os/$arch/ccusage"; then
+  echo "ccusage: cannot make $dir/$os/$arch/ccusage-mcp and ccusage executable" >&2
+  exit 1
+fi
 
 exec "$target" "$@"
