@@ -699,3 +699,7 @@ CI job is deleted (`Kesin11/actions-timeline` is not approved); `nix/tools/chang
 `.github/actions/commit-and-push-main`, `.github/scripts/generate-e2e-fixture.nu` and
 `.github/scripts/upsert-pr-comment.nu` are deleted; Claude-only reports use the root argv
 form (`ccusage blocks`, `ccusage statusline`); `plugin-validate` pins Claude Code 2.1.303.
+
+7. **`list-sources` `engine-error` (§5.4).** `list-sources` adds an `engine-error` string field
+   when the engine cannot be located or queried; it is omitted when null. This is additive to
+   the §5.4 shape.
