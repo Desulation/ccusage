@@ -70,9 +70,9 @@ in
           }
           generate-config-schema "$tmp"
           oxfmt --write "$tmp"
-          install_if_changed "$tmp" apps/ccusage/config-schema.json
+          install_if_changed "$tmp" config-schema.json
           if [ -d docs/public ]; then
-            install_if_changed apps/ccusage/config-schema.json docs/public/config-schema.json
+            install_if_changed config-schema.json docs/public/config-schema.json
           fi
         '';
       };
@@ -223,7 +223,7 @@ in
           schema-gen = {
             command = lib.getExe schemaGen;
             includes = [
-              "apps/ccusage/config-schema.json"
+              "config-schema.json"
               "rust/crates/ccusage-config/src/config_schema.rs"
               "rust/crates/ccusage-config/src/bin/generate_config_schema.rs"
             ];
@@ -232,7 +232,7 @@ in
         };
       };
 
-      # `nix run .#generate-schema` regenerates apps/ccusage/config-schema.json
+      # `nix run .#generate-schema` regenerates config-schema.json
       # (and the docs copy) from the current Rust source. It reuses the exact
       # script the treefmt formatter and the config-schema flake check rely on,
       # so the three can never drift apart. Run it from the repo root.

@@ -8,7 +8,6 @@ target/
 result
 result-*
 *.tgz
-packages/ccusage-*/bin/
 
 # code coverage
 coverage

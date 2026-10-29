@@ -1,7 +1,5 @@
 packages:
-  - apps/*
   - docs
-  - packages/*
 
 catalogMode: strict
 
@@ -11,9 +9,6 @@ catalogs:
     vitepress: 2.0.0-alpha.21
     vitepress-plugin-group-icons: ^1.8.1
     vitepress-plugin-llms: ^1.14.0
-  types:
-    '@types/node': ^24.19.2
-    '@types/react': ^19.3.0
 
 enablePrePostScripts: true
 

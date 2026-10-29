@@ -10,7 +10,7 @@ The public site is hosted on Cloudflare at https://ccusage.com.
 - `public/` - screenshots, static assets, and generated config schema.
 - `.vitepress/` - VitePress configuration and theme customization.
 
-The docs build copies `apps/ccusage/config-schema.json` to
+The docs build copies `config-schema.json` to
 `docs/public/config-schema.json` before running VitePress.
 
 ## Commands
