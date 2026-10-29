@@ -9,6 +9,8 @@ export default defineConfig({
 	base: '/',
 	cleanUrls: true,
 	ignoreDeadLinks: true,
+	// docs/superpowers holds internal design specs and plans, not site pages; they can contain GitHub Actions `${{ }}` expressions Vue would try to evaluate.
+	srcExclude: ['superpowers/**'],
 
 	head: [
 		['link', { rel: 'icon', href: '/favicon.svg' }],
