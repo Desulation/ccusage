@@ -16,6 +16,11 @@ namespace FakeEngine;
 //   --fake-child             start a silent, hanging copy of itself that inherits stdin/stdout/stderr
 //   --fake-pid-file=<path>   atomically write "<pid>" (plus "\n<child pid>" with --fake-child) before stdout
 //   --version                prints "ccusage 0.0.0-fake"
+// Engine-flag rules, so handler tests can drive failures through validated arguments:
+//   --debug                  also writes "debug: fake" to stderr
+//   --project fail           exit 4, stderr "boom"
+//   --project plain          stdout "not json\n" instead of the echo
+//   --id hang                sleep forever after writing stdout
 // Stdin is read to end (as UTF-8, like the real engine) only when it is redirected and an arg equals "statusline".
 static class Program
 {
@@ -66,6 +71,27 @@ static class Program
             }
         }
 
+        switch (ValueAfter(args, "--project"))
+        {
+            case "fail":
+                exitCode = 4;
+                stderr = "boom";
+                break;
+            case "plain":
+                stdoutOverride = "not json\n";
+                break;
+        }
+
+        if (ValueAfter(args, "--id") == "hang")
+        {
+            hang = true;
+        }
+
+        if (args.Contains("--debug"))
+        {
+            stderr += "debug: fake";
+        }
+
         var stdin = Console.IsInputRedirected && args.Contains("statusline")
             ? new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false)).ReadToEnd()
             : "";
@@ -106,6 +132,12 @@ static class Program
         }
 
         return exitCode;
+    }
+
+    private static string? ValueAfter(string[] args, string flag)
+    {
+        var i = Array.IndexOf(args, flag);
+        return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
     }
 
     private static bool TryValue(string arg, string prefix, out string value)

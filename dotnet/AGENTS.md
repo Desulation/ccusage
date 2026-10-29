@@ -54,6 +54,13 @@ exits 0. Control args (each is also echoed in `argv`):
   with `--fake-child`) to `path`, so tests can assert the process tree was killed.
 - `--version` - print `ccusage 0.0.0-fake`.
 
+Engine-flag rules, so handler tests can drive failures through arguments that pass validation:
+
+- `--debug` - also write `debug: fake` to stderr.
+- `--project fail` - exit 4 with stderr `boom`.
+- `--project plain` - write `not json\n` instead of the echo.
+- `--id hang` - sleep forever after writing stdout.
+
 Stdin is read to end (as UTF-8, like the real engine) only when it is redirected and an argument
 equals `statusline`; otherwise `stdin` is `""`.
 
