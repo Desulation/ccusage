@@ -294,8 +294,9 @@ jobs:
           CCUSAGE_ENGINE: ${{ runner.temp }}/bin/ccusage${{ matrix.exe }}
         run: dotnet test --project Ccusage.Mcp.slnx -c Release
 
-  # The only run of the cross-built osx-arm64 server and engine on arm64; see
-  # `dotnet-test-macos-arm64` for why it is non-blocking.
+  # Runs the cross-built osx-arm64 server and engine on arm64 (with
+  # `bundle-smoke-macos-arm64`); see `dotnet-test-macos-arm64` for why it is
+  # non-blocking.
   e2e-osx-arm64:
     name: e2e (${{ matrix.rid }}, non-blocking)
     needs: build-artifacts

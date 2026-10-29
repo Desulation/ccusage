@@ -728,4 +728,8 @@ form (`ccusage blocks`, `ccusage statusline`); `plugin-validate` pins Claude Cod
    both binaries, and to keep the `macos-latest` legs only as non-blocking jobs outside
    `ci gate`. `.github/actions/build-macos-nix-native-package` is deleted with its matrix leg,
    superseding the note above that kept the macOS action's cross-build branch; `nix/` and the
-   darwin flake outputs stay, and `nix flake check` still evaluates them.
+   darwin flake outputs stay, and `nix flake check` still evaluates them. Consequences: the
+   osx-arm64 engine is now a plain cargo build like osx-x64, so it embeds the LiteLLM pricing
+   fetched at build time instead of the flake-pinned snapshot and lacks the Nix link flags (it
+   may be slightly larger); and both macOS legs depend on `macos-15-intel`, the last Intel
+   macOS image GitHub offers, so its retirement will force a revisit.
