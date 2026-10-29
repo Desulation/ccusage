@@ -33,7 +33,8 @@ Design authority: `docs/superpowers/specs/2026-10-29-csharp-aot-mcp-server-desig
 - AOT: zero trim/AOT warnings, source-generated `JsonSerializerContext` for all JSON, no
   reflection-based serialization, `Type.GetType`, `Activator.CreateInstance` or dynamic code.
 - The engine is located through `CCUSAGE_ENGINE`, then the server's directory, then its
-  `<os-arch>` subfolder, then `PATH` (`Engine/EngineLocator.cs`).
+  `<arch>` subfolder (`x64` or `arm64`, the OS architecture), then `PATH`
+  (`Engine/EngineLocator.cs`).
 - The only approved third-party NuGet package is `ModelContextProtocol` 2.3.0. First-party
   Microsoft/.NET packages are fine; anything else needs explicit approval. Versions live in
   `Directory.Packages.props`.
