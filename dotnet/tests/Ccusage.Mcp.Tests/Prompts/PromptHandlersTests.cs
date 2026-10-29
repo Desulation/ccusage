@@ -41,6 +41,15 @@ public sealed class PromptHandlersTests
             "ccusage codex weekly failed:\n\nReport 'weekly' is not available for source 'codex'.",
             Text(await Prompts().GetAsync("ccusage", Args("""{"args":"codex weekly"}"""), default)));
 
+    // §5.6: a validation error is the prompt's message, not a protocol error.
+    [TestMethod]
+    [DataRow("""{"args":5}""")]
+    [DataRow("""{"args":["daily"]}""")]
+    public async Task GetAsync_NonStringArgs_FormatsFailure(string json) =>
+        Assert.AreEqual(
+            "ccusage failed:\n\nParameter 'args' must be a string.",
+            Text(await Prompts().GetAsync("ccusage", Args(json), default)));
+
     [TestMethod]
     public async Task GetAsync_UnknownPrompt_Throws() =>
         Assert.AreEqual(

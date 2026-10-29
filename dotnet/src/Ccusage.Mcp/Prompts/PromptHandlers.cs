@@ -27,7 +27,8 @@ public sealed class PromptHandlers(CommandCatalog catalog, EngineLocator locator
         ValueTask.FromResult(new ListPromptsResult { Prompts = [PromptDefinitions.Ccusage] });
 
     /// <summary>Runs the <c>ccusage</c> prompt's report (<c>args</c> missing means <c>""</c>, i.e. daily for all sources).</summary>
-    /// <exception cref="McpException">The prompt is unknown, or <c>args</c> is not a string.</exception>
+    /// <remarks>A validation error (a non-string <c>args</c> included) or an engine error is the message's text (§5.6).</remarks>
+    /// <exception cref="McpException">The prompt is unknown.</exception>
     /// <exception cref="OperationCanceledException"><paramref name="ct"/> was canceled.</exception>
     public async ValueTask<GetPromptResult> GetAsync(string name, IDictionary<string, JsonElement>? args, CancellationToken ct)
     {
@@ -43,18 +44,20 @@ public sealed class PromptHandlers(CommandCatalog catalog, EngineLocator locator
         }
         catch (ValidationException e)
         {
-            throw new McpException(e.Message);
+            // No usable args text, so the heading names no report.
+            return Message($"ccusage failed:\n\n{e.Message}");
         }
 
         var result = await EngineCall.ExecuteAsync(catalog, locator, runner, () => CliArgsParser.Parse(catalog, text), ct).ConfigureAwait(false);
 
         var rendered = text.Trim() is { Length: > 0 } trimmed ? trimmed : "daily";
-        var message = result.Error is null
+        return Message(result.Error is null
             ? $"ccusage {rendered}\n\n```json\n{result.Stdout}\n```\n\n{Instruction}"
-            : $"ccusage {rendered} failed:\n\n{result.Error}";
-        return new GetPromptResult
-        {
-            Messages = [new PromptMessage { Role = Role.User, Content = new TextContentBlock { Text = message } }],
-        };
+            : $"ccusage {rendered} failed:\n\n{result.Error}");
     }
+
+    private static GetPromptResult Message(string text) => new()
+    {
+        Messages = [new PromptMessage { Role = Role.User, Content = new TextContentBlock { Text = text } }],
+    };
 }

@@ -43,11 +43,12 @@ public static class ToolArguments
         {
             if (hasSource && name == SourceParameter)
             {
+                // Any other JSON kind goes to CommandValidator as its JSON text, so the error lists the valid sources.
                 source = value.ValueKind switch
                 {
                     JsonValueKind.String => value.GetString()!,
                     JsonValueKind.Null => source,
-                    _ => throw Unsupported(name, value),
+                    _ => value.GetRawText(),
                 };
             }
             else if (tool == StatuslineTool && name == HookInputParameter)
@@ -78,9 +79,32 @@ public static class ToolArguments
             : throw new ValidationException($"Parameter '{ArgsParameter}' must be a string.");
     }
 
+    /// <summary>
+    /// Rejects every argument except <paramref name="allowed"/>, for the tools whose schemas declare
+    /// <c>additionalProperties:false</c> but take no typed options (<c>report</c>, <c>list-sources</c>). A JSON null
+    /// counts as omitted.
+    /// </summary>
+    /// <param name="tool">The tool name, for the error message.</param>
+    /// <param name="args">The call's arguments, or null.</param>
+    /// <param name="allowed">The tool's parameters; empty for a tool that takes none.</param>
+    /// <exception cref="ValidationException">An argument that is not in <paramref name="allowed"/> is present and not null.</exception>
+    public static void RejectExtraKeys(string tool, IDictionary<string, JsonElement>? args, params string[] allowed)
+    {
+        ArgumentNullException.ThrowIfNull(allowed);
+
+        var extra = args?.FirstOrDefault(a => !allowed.Contains(a.Key) && a.Value.ValueKind != JsonValueKind.Null).Key;
+        if (extra is not null)
+        {
+            throw new ValidationException(allowed.Length == 0
+                ? $"Parameter '{extra}' is not a parameter of '{tool}', which takes no parameters."
+                : $"Parameter '{extra}' is not a parameter of '{tool}'. Valid parameters: {string.Join(", ", allowed)}.");
+        }
+    }
+
     private static string HookInput(IDictionary<string, JsonElement> args)
     {
-        if (!args.TryGetValue(HookInputParameter, out var value))
+        // A JSON null counts as omitted, as for every other parameter.
+        if (!args.TryGetValue(HookInputParameter, out var value) || value.ValueKind == JsonValueKind.Null)
         {
             throw new ValidationException($"Parameter '{HookInputParameter}' is required.");
         }

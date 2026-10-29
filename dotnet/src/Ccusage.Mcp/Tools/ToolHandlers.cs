@@ -29,17 +29,30 @@ public sealed class ToolHandlers(CommandCatalog catalog, EngineLocator locator, 
     {
         if (name == "list-sources")
         {
+            try
+            {
+                ToolArguments.RejectExtraKeys(name, args);
+            }
+            catch (ValidationException e)
+            {
+                return Error(e.Message);
+            }
+
             return new CallToolResult { Content = [Text(await ListSourcesAsync(ct).ConfigureAwait(false))] };
         }
 
         Func<CommandRequest> request = name == "report"
-            ? () => CliArgsParser.Parse(catalog, ToolArguments.CliText(args, required: true))
+            ? () =>
+            {
+                ToolArguments.RejectExtraKeys(name, args, "args");
+                return CliArgsParser.Parse(catalog, ToolArguments.CliText(args, required: true));
+            }
             : () => ToolArguments.FromTyped(catalog, name, args);
         var result = await EngineCall.ExecuteAsync(catalog, locator, runner, request, ct).ConfigureAwait(false);
 
         if (result.Error is not null)
         {
-            return new CallToolResult { IsError = true, Content = [Text(result.Error)] };
+            return Error(result.Error);
         }
 
         return string.IsNullOrEmpty(result.Stderr)
@@ -80,6 +93,8 @@ public sealed class ToolHandlers(CommandCatalog catalog, EngineLocator locator, 
         var line = (stdout ?? "").ReplaceLineEndings("\n").Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0);
         return line is not null && line.StartsWith(VersionPrefix, StringComparison.Ordinal) ? line[VersionPrefix.Length..] : line;
     }
+
+    private static CallToolResult Error(string text) => new() { IsError = true, Content = [Text(text)] };
 
     private static TextContentBlock Text(string text) => new() { Text = text };
 }

@@ -172,8 +172,10 @@ public sealed class EngineRunner(TimeSpan timeout, Action<string> logWarning)
         {
             // Already exited.
         }
-        catch (System.ComponentModel.Win32Exception e)
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or AggregateException)
         {
+            // AggregateException: some descendants could not be killed. Either way the run still ends as a timeout
+            // (or a cancellation) once DrainAsync's grace has passed, never as an unhandled exception.
             logWarning($"Could not kill the ccusage engine process tree: {e.Message}");
         }
     }
