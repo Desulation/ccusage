@@ -2,6 +2,15 @@
 # this fork (spec §9.4). It force-pushes upstream's tip to `sync/upstream` and
 # never pushes to `main`; conflicts are resolved in the pull request.
 #
+# Merge the sync pull request with a MERGE COMMIT, never squash or rebase.
+# The "already contained" check needs upstream's commits to become ancestors
+# of `main`; after a squash or rebase they never do, so every week would look
+# new and the same conflicts would come back.
+#
+# `sync/upstream` is force-pushed only when upstream has commits it does not
+# already contain, so conflict-resolution commits pushed to the branch survive
+# the weekly runs until upstream moves again.
+#
 # The pull request is opened with GITHUB_TOKEN, so CI does not run on it
 # automatically. Run CI by hand on the branch:
 #   gh workflow run ci.yaml --ref sync/upstream
@@ -39,9 +48,26 @@ jobs:
           if git merge-base --is-ancestor upstream/main origin/main; then
             echo up_to_date=true >> "$GITHUB_OUTPUT"
           fi
+      # Skip the push while sync/upstream already contains upstream's tip, so
+      # conflict resolutions committed to the branch are kept. The explicit
+      # fetch makes sure origin/sync/upstream is current whenever it exists.
+      # ls-remote exits 2 when the branch is absent; any other failure stops
+      # the job rather than force-pushing over a branch it could not inspect.
       - name: Push upstream to sync/upstream
         if: steps.check.outputs.up_to_date != 'true'
-        run: git push --force origin upstream/main:refs/heads/sync/upstream
+        run: |
+          rc=0
+          git ls-remote --exit-code --heads origin sync/upstream > /dev/null || rc=$?
+          if [ "$rc" -eq 0 ]; then
+            git fetch origin sync/upstream
+            if git merge-base --is-ancestor upstream/main origin/sync/upstream; then
+              echo "sync/upstream already contains upstream/main; not pushing"
+              exit 0
+            fi
+          elif [ "$rc" -ne 2 ]; then
+            exit "$rc"
+          fi
+          git push --force origin upstream/main:refs/heads/sync/upstream
       # Commit subjects are upstream-controlled text, so the body goes through a
       # file and never through a shell string. --repo is explicit because gh
       # would otherwise resolve the `upstream` remote ahead of `origin`.
@@ -51,6 +77,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           {
+            printf '%s\n\n' 'Merge this PR with a merge commit (never squash or rebase); otherwise upstream history is lost and every week looks new.'
             printf 'Incoming commits from ccusage/ccusage main:\n\n'
             git log --oneline --no-decorate origin/main..upstream/main
           } > "$RUNNER_TEMP/body.md"
