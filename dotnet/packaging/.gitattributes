@@ -1,0 +1,2 @@
+# launch.sh runs under /bin/sh inside the .mcpb bundle, so shell scripts must stay LF on every checkout.
+*.sh text eol=lf
