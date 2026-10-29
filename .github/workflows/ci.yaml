@@ -398,7 +398,8 @@ jobs:
       - name: Validate plugin
         run: |
           "$HOME/.local/bin/claude" plugin validate --strict plugin
-      # The marketplace lives at .claude-plugin/marketplace.json (spec §15 row 7).
+      # The marketplace lives at .claude-plugin/marketplace.json; the bundle URL
+      # is in plugin.json, the only placement Claude Code loads (spec §7.1).
       - name: Validate marketplace
         run: |
           "$HOME/.local/bin/claude" plugin validate --strict .
@@ -421,10 +422,10 @@ jobs:
           p=$(jq -r .version plugin/.claude-plugin/plugin.json)
           # An empty result (no download URL) fails the comparison below
           # instead of aborting the step through pipefail.
-          m=$(grep -o 'download/v[0-9][0-9.]*/ccusage.mcpb' .claude-plugin/marketplace.json | sed 's#download/v##; s#/ccusage.mcpb##' || true)
+          u=$(jq -r '.mcpServers // ""' plugin/.claude-plugin/plugin.json | grep -o 'download/v[0-9][0-9.]*/ccusage.mcpb' | sed 's#download/v##; s#/ccusage.mcpb##' || true)
           b=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' dotnet/Directory.Build.props)
-          if [ "$v" != "$d" ] || [ "$v" != "$p" ] || [ "$v" != "$m" ] || [ "$v" != "$b" ]; then
-            echo "::error::version mismatch: package.json=$v docs=$d plugin=$p marketplace=$m props=$b"
+          if [ "$v" != "$d" ] || [ "$v" != "$p" ] || [ "$v" != "$u" ] || [ "$v" != "$b" ]; then
+            echo "::error::version mismatch: package.json=$v docs=$d plugin=$p bundle-url=$u props=$b"
             exit 1
           fi
           echo "all versions are $v"
