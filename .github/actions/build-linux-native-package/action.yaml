@@ -25,10 +25,11 @@ runs:
   using: composite
   steps:
     - uses: ./.github/actions/setup-nix-cache
+      id: nix
       with:
         cache-scope: ${{ inputs.cache-scope }}
         save: ${{ inputs.save-nix-cache }}
-        gc-max-store-size-linux: 4G
+        defer-save: 'true'
 
     - name: Build Linux static binary
       shell: bash
@@ -79,3 +80,15 @@ runs:
         name: ccusage-${{ inputs.rid }}
         path: ${{ runner.temp }}/engine/ccusage
         if-no-files-found: error
+
+    # An explicit step rather than cache-nix-action's post-job save, which never
+    # runs when nested in this composite action (see setup-nix-cache's
+    # defer-save). Unlike macOS, this action roots only the Crane layers and not
+    # the flake inputs, so the limit stays at 4G instead of 0 to keep the
+    # fetched flake inputs warm.
+    - name: Save Nix store
+      if: steps.nix.outputs.save == 'true'
+      uses: nix-community/cache-nix-action/save@7df957e333c1e5da7721f60227dbba6d06080569 # v7.0.2
+      with:
+        primary-key: ${{ steps.nix.outputs.primary-key }}
+        gc-max-store-size-linux: 4G
