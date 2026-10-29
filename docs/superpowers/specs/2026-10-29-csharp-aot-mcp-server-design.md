@@ -621,3 +621,40 @@ Any further third-party dependency requires the user's approval and a spec adden
   archive downloads through a browser may be. The docs explain `xattr -d com.apple.quarantine`;
   signing and notarization are out of scope.
 - **Undocumented `.mcpb` handling in Claude Code.** Covered by Phase 0 with fallbacks.
+
+## 16. Planning decisions (2026-10-29)
+
+Decisions taken while writing the implementation plan
+(`docs/superpowers/plans/2026-10-29-csharp-aot-mcp-server.md`), approved by the user. They
+refine the sections named; earlier sections are left as written.
+
+1. **Option kind `number` (§4.1).** The engine parses `--session-length` as `f64`
+   (`rust/crates/ccusage-cli/src/types.rs`), so the C# type table gains a `number` kind
+   (JSON schema `{"type":"number","minimum":0}`) alongside `int`; `session-length` uses it.
+2. **`CONTRIBUTING.md` (§3.2).** The contribution-gate and `lgtm`/`lgtmi` approval sections
+   are removed with the gate automation; the rest of the file stays.
+3. **Docs navigation (§3.4).** Besides sponsor content, `docs/.vitepress/config.ts` drops the
+   `npm`, `Package Stats` and `DeepWiki` nav items, the `npm` social link and the `/npm`,
+   `/deepwiki`, `/sponsor` redirects; the GitHub, Changelog and `editLink` targets point at
+   `Desulation/ccusage`.
+4. **`docs-build` CI job (§9.2).** `ci.yaml` gains a `docs-build` job (pnpm and Node from Nix)
+   that runs `pnpm install --lockfile-only`, uploads a changed `pnpm-lock.yaml` as the
+   `pnpm-lock` artifact and fails, then `pnpm install --frozen-lockfile` and `just docs::build`.
+   The regenerated lockfile is committed from that artifact (the development machine has no
+   pnpm).
+5. **Strict parameters (§5.1, §5.7).** Typed tools reject any parameter outside their schema
+   (`additionalProperties: false` plus a server-side check) with an error that lists the
+   valid parameters for that `(source, report)` page.
+6. **Phase 0 Q4/Q5 in CI (§11).** Where the development machine cannot observe them, Q4 and
+   Q5 are verified by CI: the `bundle-smoke` job's `windows-11-arm` leg asserts that the
+   win-x64 server selects `win\arm64\ccusage.exe` (`list-sources` → `engine-path`), and its
+   Linux/macOS legs assert the executable bits after extracting `ccusage.mcpb`. §15 records
+   these rows as "pending CI"; anything still untestable is recorded as "unverified".
+
+Also confirmed without changing the spec text: root `package.json` `name` becomes `ccusage`
+(with `homepage`) so `package.nix` can derive `pname`/`meta` from it; the `action-timeline`
+CI job is deleted (`Kesin11/actions-timeline` is not approved); `nix/tools/changelogithub`,
+`nix/darwin-x64-package.nix` and the macOS action's cross-build branch stay in place;
+`.github/actions/commit-and-push-main`, `.github/scripts/generate-e2e-fixture.nu` and
+`.github/scripts/upsert-pr-comment.nu` are deleted; Claude-only reports use the root argv
+form (`ccusage blocks`, `ccusage statusline`); `plugin-validate` pins Claude Code 2.1.303.
