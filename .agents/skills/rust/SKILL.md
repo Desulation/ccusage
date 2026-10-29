@@ -41,8 +41,7 @@ agent grouping, date filtering, `--offline`, `CLAUDE_CONFIG_DIR`, and
 source-specific environment variables.
 
 `origin/main` no longer contains the TypeScript adapters. When porting historical
-behavior, compare against a commit that still has them
-(`git log -1 -- apps/ccusage/src/adapter`). Fix the comparison window — current
+behavior, compare against a commit that still has them. Fix the comparison window — current
 main, a previous release, or that pinned commit — before changing behavior.
 
 ## Visibility

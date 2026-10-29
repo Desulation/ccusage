@@ -11,12 +11,11 @@ need nothing; anything that changes what a user can run, see, or configure needs
 a pass over every surface, not only the guide page you started from:
 
 - root `README.md`
-- `apps/ccusage/README.md`
-- the relevant `docs/guide/` pages and their cross-links
+- the relevant `docs/guide/` pages, including `docs/guide/mcp.md`, and their cross-links
 - VitePress navigation in `docs/.vitepress/`
+- `plugin/skills/ccusage/SKILL.md`
 
 Then read the local conventions before writing:
 
 - `docs/README.md` - site structure, schema-copy behavior, `just docs::*` recipes.
 - `docs/AGENTS.md` - screenshot placement and alt text, cross-linking, lint escapes.
-- `apps/ccusage/AGENTS.md` - before touching README content that ships to npm.

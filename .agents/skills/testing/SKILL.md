@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Guides ccusage Rust and Node tests. Use when adding or fixing cargo tests, Node test files, CLI snapshots, Claude model pricing, LiteLLM compatibility, or fixture-backed tests.
+description: Guides ccusage Rust and MSTest tests. Use when adding or fixing cargo tests, MSTest tests under dotnet/, CLI snapshots, Claude model pricing, LiteLLM compatibility, or fixture-backed tests.
 ---
 
 # ccusage Testing
@@ -23,7 +23,12 @@ large module is split, its tests move with the code instead of staying in `main.
 
 Read `references/rust.md` for fixtures, snapshots, pricing, and model names.
 
-## Node
+## .NET
 
-Read `references/node-test.md`. Node covers only the package launcher and the Nix-side
-JS tooling; production CLI runtime behavior is tested in Rust.
+MSTest in `dotnet/tests/Ccusage.Mcp.Tests`, with the FakeEngine (`dotnet/tests/FakeEngine`)
+standing in for the engine and fixtures under `dotnet/tests/fixtures`. E2E tests run against the
+real engine once `CCUSAGE_MCP_E2E_SERVER` and `CCUSAGE_ENGINE` are set. The `dotnet` skill and
+`dotnet/AGENTS.md` cover the runner and the FakeEngine protocol.
+
+The one remaining Node test is `nix/tools/models-dev-gen/compact.test.ts` (`just test-node`);
+production CLI runtime behavior is tested in Rust.
