@@ -1,4 +1,6 @@
-﻿namespace Ccusage.Mcp;
+﻿using Ccusage.Mcp.Engine;
+
+namespace Ccusage.Mcp;
 
 static class Program
 {
@@ -6,8 +8,7 @@ static class Program
     {
         if (args.Contains("--version"))
         {
-            Console.Out.WriteLine($"ccusage-mcp {ServerVersion.Value}");
-            return 0;
+            return VersionCommand.Run(Console.Out, EngineLocator.Default);
         }
 
         // Replaced by the MCP stdio server in Task 7b.
