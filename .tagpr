@@ -4,6 +4,8 @@
 	changelog = false
 	release = false
 	versionFile = package.json,docs/package.json,plugin/.claude-plugin/plugin.json,dotnet/Directory.Build.props
+	# versionFile only bumps plugin.json's "version"; this moves its bundle URL
+	postVersionCommand = .github/scripts/sync-bundle-url.sh
 	# The first line of the template becomes the release PR title; it must stay
 	# a Conventional Commits header so the check-pr-title workflow passes
 	template = .github/tagpr-template.md

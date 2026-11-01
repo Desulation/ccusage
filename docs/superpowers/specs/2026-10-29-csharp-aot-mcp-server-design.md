@@ -459,7 +459,9 @@ Expected size: ~30–50 MB compressed (measured in Phase 0).
   `package.nix`, `rust/crates/ccusage/build.rs`, and the `main.rs` version test keep
   reading it).
 - tagpr `versionFile`: `package.json`, `docs/package.json`, `plugin/.claude-plugin/plugin.json`
-  (its `version` and the version inside the bundle URL), `dotnet/Directory.Build.props`.
+  (its `version`), `dotnet/Directory.Build.props`. tagpr rewrites only the first version
+  string in each file, so its `postVersionCommand`, `.github/scripts/sync-bundle-url.sh`, moves
+  the version inside `plugin.json`'s bundle URL.
 - CI job `version-consistency` fails if those five values disagree.
 - The `.mcpb` manifest version is stamped at bundle time from `package.json`.
 
@@ -743,3 +745,10 @@ form (`ccusage blocks`, `ccusage statusline`); `plugin-validate` pins Claude Cod
    `https://` bundle: the download and extraction finish before the server starts. The entry
    field is removed, `marketplace.json` leaves tagpr's `versionFile`, and `version-consistency`
    reads the bundle URL from `plugin.json`.
+10. **tagpr bumps only the first version string per file (§8), 2026-11-01.** The v20.0.47
+    release PR changed `plugin.json`'s `version` but left its bundle URL at v20.0.46, so
+    v20.0.47 installs served the v20.0.46 bundle and `version-consistency` failed on `main`
+    (item 9's URL had been the only version string in `marketplace.json`, so v20.0.46 was
+    bumped). tagpr's `postVersionCommand`, `.github/scripts/sync-bundle-url.sh`, now rewrites
+    the URL to `TAGPR_NEXT_VERSION` and fails the release PR if the result is not that URL;
+    `plugin.json` was corrected to v20.0.47 by hand.
